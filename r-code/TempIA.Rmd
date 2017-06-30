@@ -1,0 +1,696 @@
+---
+title: "Psyllid immigration model based on Tedeschi et al. (2012)"
+author: "Nicolas Sander"
+date: 'created: 25.10.2016, last modified: `r format(Sys.Date(), format="%d.%m.%Y")`'
+output:
+  pdf_document:
+    fig_caption: yes
+    keep_tex: yes
+    toc: yes
+    toc_depth: 5
+  html_document: default
+  word_document: default
+subtitle: Clustering of monitoring sites
+header-includes: \usepackage{graphicx}
+---
+
+
+## Introduction
+This script prepares the temperature sum immigation models (based on Tedeschi et al. (2012))
+
+```{r setup, warning=FALSE, echo=FALSE}
+library(knitr) # for creating html-file
+opts_knit$set(root.dir='../') # definining working directory; or normalizePath('../')
+opts_chunk$set(fig.align='center') # aligns all figures
+opts_chunk$set(echo=FALSE) # suppresses r-code
+opts_chunk$set(message=FALSE) # suppresses library outputs
+opts_chunk$set(warning=FALSE) # suppresses library warnings
+opts_chunk$set(dev='pdf')
+
+```
+
+```{r load}
+rm(list=ls(all=TRUE))
+source("r-code/00_settings.R")
+detachAllPackages() #detach("package:plyr", unload=TRUE) # makes problems with the group_by function
+load(file="data/AP_rawdata_vector.RData")
+load(file="data/AP_workingdata_clustering.RData")
+load(file="data/AP_workingdata_vector.RData")
+set.seed(2015)
+```
+
+```{r libraries}
+if(!require(ggplot2))
+{
+  install.packages("ggplot2", repos = mir)
+  require(ggplot2)
+}
+if(!require(plyr))
+{
+  install.packages("plyr")
+  require(plyr)
+}
+if(!require(dplyr))
+{
+  install.packages("dplyr")
+  require(dplyr)
+}
+
+if(!require(stringi))
+{
+  install.packages("stringi", repos = mir)
+  require(stringi)
+}
+
+if(!require(scales))
+{
+  install.packages("scales", repos = mir)
+  require(scales)
+}
+if(!require(MASS))
+{
+  install.packages("MASS", repos = mir)
+  require(MASS)
+}
+if(!require(qtlcharts))
+{
+  install.packages("qtlcharts", repos = mir)
+  require(qtlcharts)
+}
+```
+
+###TEMP SUM MODEL PREP FOR VALERIO'S MODEL
+```{r data preperation}
+tempsum <- data.frame()
+
+#pulling out site_id,,cluster, year, date and abundance for each insect_id and insect_stage_id
+c.melF1B <- c.melanoneuraF1B[,c(2,3,4,5,6,10,11)]
+c.melF2B <- c.melanoneuraF2B[,c(2,3,4,5,6,10,11)]
+c.picF1B <- c.pictaF1B[,c(2,3,4,5,6,10,11)]
+c.picF2B <- c.pictaF2B[,c(2,3,4,5,6,10,11)]
+c.melF1YT <- c.melanoneuraF1YT[,c(2,3,4,5,6,10,11)]
+c.melF2YT <- c.melanoneuraF2YT[,c(2,3,4,5,6,10,11)]
+c.picF1YT <- c.pictaF1YT[,c(2,3,4,5,6,10,11)]
+c.picF2YT <- c.pictaF2YT[,c(2,3,4,5,6,10,11)]
+
+#renaming 'amount'
+names(c.melF1B)[6] <- 'abundance'
+names(c.melF2B)[6] <- 'abundance'
+names(c.picF1B)[6] <- 'abundance'
+names(c.picF2B)[6] <- 'abundance'
+names(c.melF1YT)[6] <- 'abundance'
+names(c.melF2YT)[6] <- 'abundance'
+names(c.picF1YT)[6] <- 'abundance'
+names(c.picF2YT)[6] <- 'abundance'
+
+clusterSites <- unique(modeldata.t[,c(2,3)]) #site_id and cluster id
+regionSites <- unique(sitesInsectVector[,c(1,3)])
+
+#Combining beating and yellow trap subsets
+c.melF1comb <- merge(c.melF1B, c.melF1YT, by = c("site_id","region","date","cluster","year"), all = TRUE)
+c.melF1comb <- transform(c.melF1comb, abundance = rowSums(c.melF1comb[,c("abundance.x","abundance.y")], na.rm = TRUE))
+c.melF1comb[, "presence"] <- apply(c.melF1comb[, c("presence.x","presence.y")], 1, max, na.rm=T)
+c.melF1comb <- c.melF1comb[,-which(names(c.melF1comb) %in% c("abundance.x","abundance.y","presence.x","presence.y"))]#dropping uncombined columns
+###
+c.melF2comb <- merge(c.melF2B, c.melF2YT, by = c("site_id","region","date","cluster","year"), all = TRUE)
+c.melF2comb <- transform(c.melF2comb, abundance = rowSums(c.melF2comb[,c("abundance.x","abundance.y")], na.rm = TRUE))
+c.melF2comb[, "presence"] <- apply(c.melF2comb[, c("presence.x","presence.y")], 1, max, na.rm=T)
+c.melF2comb <- c.melF2comb[,-which(names(c.melF2comb) %in% c("abundance.x","abundance.y","presence.x","presence.y"))]#dropping uncombined columns
+###
+c.picF1comb <- merge(c.picF1B, c.picF1YT, by = c("site_id","region","date","cluster","year"), all = TRUE)
+c.picF1comb <- transform(c.picF1comb, abundance = rowSums(c.picF1comb[,c("abundance.x","abundance.y")], na.rm = TRUE))
+c.picF1comb[, "presence"] <- apply(c.picF1comb[, c("presence.x","presence.y")], 1, max, na.rm=T)
+c.picF1comb <- c.picF1comb[,-which(names(c.picF1comb) %in% c("abundance.x","abundance.y","presence.x","presence.y"))]#dropping uncombined columns
+###
+c.picF2comb <- merge(c.picF2B, c.picF2YT, by = c("site_id","region","date","cluster","year"), all = TRUE)
+c.picF2comb <- transform(c.picF2comb, abundance = rowSums(c.picF2comb[,c("abundance.x","abundance.y")], na.rm = TRUE))
+c.picF2comb[, "presence"] <- apply(c.picF2comb[, c("presence.x","presence.y")], 1, max, na.rm=T)
+c.picF2comb <- c.picF2comb[,-which(names(c.picF2comb) %in% c("abundance.x","abundance.y","presence.x","presence.y"))]#dropping uncombined columns
+###
+
+#TEMPSUMLIST CREATION
+#listnames <- c('c.melF1','c.melF2','c.picF1','c.picF2','c.melF1YT','c.melF2YT','c.picF1YT','c.picF2YT')
+#tempsumlist <- list(c.melF1,c.melF2,c.picF1,c.picF2,c.melF1YT,c.melF2YT,c.picF1YT,c.picF2YT)
+listnames <- c('c.melF1comb','c.melF2comb','c.picF1comb','c.picF2comb')
+tempsumlist <- list(c.melF1comb,c.melF2comb,c.picF1comb,c.picF2comb)
+
+names(tempsumlist) <- listnames
+
+
+###############DECIDE IF SUM BY REGION OR CLUSTER HERE! #########################
+#Sum by region
+for(i in 1:length(tempsumlist)){
+tempsumlist[[i]] <- as.data.frame(tempsumlist[[i]] %>% dplyr::group_by(date,year,region) %>% dplyr::summarise(abundance = sum(abundance,na.rm=T), presence=max(presence))) #combine all sites within same region at same date
+}
+#Sum by cluster
+#for(i in 1:length(tempsumlist)){
+#tempsumlist[[i]] <- as.data.frame(tempsumlist[[i]] %>% dplyr::group_by(date,year,cluster) %>% dplyr::summarise(abundance = #sum(abundance,na.rm=T), presence=max(presence))) #combine all sites within same region at same date
+#}
+
+list2env(tempsumlist,environment())  #overwrite single dataframes in the global environment
+
+
+
+#merge all dataframes by columns
+tempsum <- join_all(list(tempsum, c.melF1comb,c.melF2comb,c.picF1comb,c.picF2comb), type="full")
+```
+
+```{r presence at first site visit must be 0, eval=FALSE}
+#UNNECESSARY WHEN GROUPED BY REGION
+for(i in 1:length(tempsumlist)){
+    for(s in unique(tempsumlist[[i]]$region)){ #gives site_ids
+        for(y in unique(tempsumlist[[i]]$year[tempsumlist[[i]]$region==s])){#gives years of site_id
+        #print(paste(i,s,y))
+          if(tempsumlist[[i]]$presence[tempsumlist[[i]]$region==s & tempsumlist[[i]]$year==y][1]!=0){#if the 1st presence isnt 0 at site s and year y then...
+        tempsumlist[[i]] <- tempsumlist[[i]][-c(which(tempsumlist[[i]]$region==s & tempsumlist[[i]]$year==y)),]#...delete that site s in year y
+      }
+    }
+  }
+}
+
+```
+
+```{r a0 and aMax}
+##################################################################################################
+#CALCULATING A0's = Date of first occurence for each site and year (+ species, generation and method)
+a0 <-lapply(tempsumlist, function(j){
+  sapply(split(j, list(j[,3],j[,2])), function(x){x[,1][which(x[,5]>0)[1]]}) #split by region||cluster||site + year and look for first date where insects are found
+})
+a0 <- lapply(a0, function(x) x[!is.na(x)]) #removing sites and year where no insect was found thus returning NA
+for(i in 1:length(a0)){
+  a0[[i]] <- as.data.frame(a0[[i]])
+  a0[[i]]$datetime <- as.POSIXct(a0[[i]][,1], origin="1970-01-01")
+  a0[[i]]$year <- format(a0[[i]]$datetime, format="%Y")
+  a0[[i]]$t0maxmin <- NA
+  a0[[i]]$t0maxmean <- NA
+}
+
+for(i in 1:length(a0)){ #Adding region||cluster||site_id to a0 as id
+  for(j in 1:length(a0[[i]][,1])){
+    a0[[i]]$id <- rownames(a0[[i]][1])
+    a0[[i]]$id <- gsub('.{5}$', '', a0[[i]]$id) #cut off last 5 characters (e.g. Laimburg0001.2016 -> Laimburg0001 || Bozen.2013 <- Bozen for easier filtering of overall site min t0max)
+  }
+}
+
+##################################################################################################
+#CALCULATING aMax's = Date of max. abundance for each site (+ species, generation and method)
+aMax <-lapply(tempsumlist, function(j){
+  sapply(split(j, list(j[,3])), function(x){x[,1][which.max(x[,5])]}) #split by region||cluster||site and look for first date where max # of insects are found
+})
+aMax <- lapply(aMax, function(x) x[!is.na(x)])
+for(i in 1:length(aMax)){
+  aMax[[i]] <- as.data.frame(aMax[[i]])
+  aMax[[i]]$datetime <- as.POSIXct(aMax[[i]][,1], origin="1970-01-01")
+  aMax[[i]]$year <- format(aMax[[i]]$datetime, format="%Y")
+}
+
+for(i in 1:length(aMax)){ #Adding region||cluster||site_id to aMax as id
+  for(j in 1:length(aMax[[i]][,1])){
+    aMax[[i]]$id <- rownames(aMax[[i]][1])
+  }
+}
+
+#adding cluster id & region to a0 and aMax
+#for(i in 1:length(a0)){
+#  a0[[i]] <- join_all(list(a0[[i]], regionSites), by="site_id", type="left")
+#  a0[[i]] <- join_all(list(a0[[i]], clusterSites), by="site_id", type="left")
+#  aMax[[i]] <- join_all(list(aMax[[i]], regionSites), by="site_id", type="left")
+#  aMax[[i]] <- join_all(list(aMax[[i]], clusterSites), by="site_id", type="left")
+#}
+```
+
+```{r thourly & thourlyregion}
+##################################################################################################
+thourly <- weatherStationsHourly_split
+thourly <- lapply(thourly, function(x) x[,-c(6:11)]) #removing unneeded columns
+for(i in 1:nrow(clusterStations)){
+  thourly[[i]]$cluster <- clusterStations$group[i]
+}
+
+for(i in 1:length(thourly)){
+  thourly[[i]]$datetimenum <- as.POSIXct(thourly[[i]]$datetime, format="%Y-%m-%d")#cut off %H:%M:%S due to problems with numeric transformation
+  thourly[[i]]$datetimenum <- as.numeric(thourly[[i]]$datetimenum)
+}
+
+#################################################
+thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
+thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T)))
+thourlyregion <- split(thourlyregion, thourlyregion$region) #combine dataframes back into list
+
+```
+
+```{r tmax and tmedian, eval=FALSE}
+##################################################################################################
+#CALCULATING TMax = Max. daily temperature & tmedian from hourly mean temps
+tmax <- list()
+tmedian <- list()
+
+
+for(i in 1:length(weatherStationsHourly_split)){
+tmax[[i]] <- aggregate(list(maxtempday=weatherStationsHourly_split[[i]][,4]),list(datetime=cut(as.POSIXct(weatherStationsHourly_split[[i]][,3]), "day")),FUN=max,na.rm=T)
+tmax[[i]]$maxtempday[is.infinite(tmax[[i]]$maxtempday)] <- NA
+tmax[[i]]$datetime[is.infinite(tmax[[i]]$datetime)] <- NA
+tmax[[i]]$site_id <- names(weatherStationsHourly_split)[[i]]
+tmax[[i]]$region  <- unique(weatherStationsHourly_split[[i]][1,5]) #repeating the stations region for easier filtering
+
+tmedian[[i]] <- aggregate(list(mediantempday=weatherStationsHourly_split[[i]][,4]),list(datetime=cut(as.POSIXct(weatherStationsHourly_split[[i]][,3]), "day")),FUN=median,na.rm=T)
+tmedian[[i]]$mediantempday[is.infinite(tmedian[[i]]$mediantempday)] <- NA
+tmedian[[i]]$datetime[is.infinite(tmedian[[i]]$datetime)] <- NA
+tmedian[[i]]$site_id <- names(weatherStationsHourly_split)[[i]]
+tmedian[[i]]$region  <- unique(weatherStationsHourly_split[[i]][1,5]) #repeating the stations region for easier filtering
+}
+
+
+#naming the stations
+names(tmax)    <- names(weatherStationsHourly_split)
+names(tmedian) <- names(weatherStationsHourly_split)
+
+#changing the datetime entry to numeric for easier filtering
+for(i in 1:length(tmax)){
+  tmax[[i]]$datetime <- as.POSIXct(tmax[[i]]$datetime, format="%Y-%m-%d")
+  tmax[[i]]$datetime <- as.numeric(tmax[[i]]$datetime)
+}
+
+for(i in 1:length(tmedian)){
+  tmedian[[i]]$datetime <- as.POSIXct(tmedian[[i]]$datetime, format="%Y-%m-%d")
+  tmedian[[i]]$datetime <- as.numeric(tmedian[[i]]$datetime)
+}
+
+
+##################################################################################################
+#adding cluster id & region to tmax and tmedian
+for(i in 1:nrow(clusterStations)){
+  tmax[[i]]$cluster <- clusterStations$group[i]
+  tmedian[[i]]$cluster <- clusterStations$group[i]
+}
+```
+
+```{r t0max, eval=FALSE}
+##################################################################################################
+#T0Max = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site)
+#check a0 and then filter through txmax and tmedian at corresponding weatherstation (from cluster)
+#using tmax
+for(i in 1:length(a0)){ #loop through all species,generation and method
+  for(j in 1:length(a0[[i]][,1])){ #loop through the a0 entries
+    tmaxvec <- numeric()
+    for(x in 1:length(tmax)){ #loop through ALL weather stations
+      if(tmax[[x]]$region[1] == a0[[i]]$id[j] ){ #check which stations cluster id matches the current sites' cluster id
+  tmaxvec  <- c(tmaxvec,max(tmax[[x]]$maxtempday[(which(tmax[[x]]$datetime == a0[[i]][,1][j])-7):(which(tmax[[x]]$datetime == a0[[i]][,1][j]))])) #temporary vector saving the max of daily max temperatures of the 7 days before a0 from all weather stations x that share the id with the site j
+       print(paste(i,j,x))
+      }
+    }
+    print(tmaxvec)
+    a0[[i]]$t0max[j] <- min(tmaxvec, na.rm=T) #min of all weather station's 7 day max
+    a0[[i]]$t0mean[j] <- mean(tmaxvec, na.rm=T) #mean of all max weekly temperatures
+  }
+ a0[[i]]$t0max[is.infinite(a0[[i]]$t0max)] <- NA
+ a0[[i]]$t0mean[is.nan(a0[[i]]$t0mean)] <- NA
+}
+
+#using tmedian = max of median daily temperatures over 7 days
+#for(i in 1:length(a0)){ #loop through all species,generation and method
+#  for(j in 1:length(a0[[i]][,1])){ #loop through the a0 entries
+#    tmedianvec <- numeric()
+#    for(x in 1:length(tmedian)){ #loop through ALL weather stations
+#      if(tmedian[[x]]$cluster[1] == a0[[i]]$cluster[j] ){ #check which stations cluster id matches the #current sites' cluster id
+#  tmedianvec  <- c(tmedianvec,max(tmedian[[x]]$mediantempday[(which(tmedian[[x]]$datetime == #a0[[i]][,1][j])-7):(which(tmedian[[x]]$datetime == a0[[i]][,1][j]))])) #temporary vector saving the mean of #daily max temperatures of the 7 days before a0 from all weather stations x that share the cluster id with #the site j
+#       #print(paste(i,j,x, a0[[i]]$t0max[j]))
+#      }
+#    }
+#    print(tmedianvec)
+#    a0[[i]]$t0max[j] <- max(tmedianvec, na.rm=T) #max of mean of all median weekly temperatures 
+#    a0[[i]]$t0mean[j] <- mean(tmedianvec, na.rm=T) #mean of all median weekly temperatures
+#  }
+#}
+```
+
+```{r t0max}
+##################################################################################################
+#T0Max = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site)
+#check a0 and then filter through txmax and tmedian at corresponding weatherstation (from cluster)
+#using tmax
+for(i in 1:length(a0)){ #loop through all species,generation and method
+  for(j in 1:length(a0[[i]][,1])){ #loop through the a0 entries
+    tmaxvec <- numeric()
+    for(x in 1:length(thourlyregion)){ #loop through ALL weather stations
+      if(thourlyregion[[x]]$region[1] == a0[[i]]$id[j] ){ #check which stations cluster id matches the current sites' cluster id
+  tmaxvec  <- c(tmaxvec,max(thourlyregion[[x]]$temphourmean[(which(thourlyregion[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):(which(thourlyregion[[x]]$datetimenum == a0[[i]][,1][j]))])) #temporary vector saving the max of daily max temperatures of the 7 days before a0 from all weather stations x that share the id with the site j
+       print(paste(i,j,x))
+      }
+    }
+    print(tmaxvec)
+    a0[[i]]$t0maxmin[j] <- min(tmaxvec, na.rm=T) #min of all weather station's 7 day max
+    a0[[i]]$t0maxmean[j] <- mean(tmaxvec, na.rm=T) #mean of all max weekly temperatures
+  }
+ a0[[i]]$t0maxmin[is.infinite(a0[[i]]$t0max)] <- NA
+ a0[[i]]$t0maxmean[is.nan(a0[[i]]$t0mean)] <- NA
+}
+
+```
+
+```{r t0maxmin and t0maxmean, eval=FALSE}
+##################################################################################################
+#Minimum of all t0max/t0mean that belong to the same site over several years
+t0maxmin <- list()
+for(i in 1:length(a0)){
+t0maxmin[[i]] <- as.data.frame(a0[[i]] %>% dplyr::group_by(id) %>% dplyr::summarise(t0maxmin = min(t0max,na.rm=T), t0meanmin = min(t0mean,na.rm=T)))
+}
+names(t0maxmin) <- names(a0)
+
+for(i in 1:length(a0)){
+  a0[[i]] <- join_all(list(a0[[i]], t0maxmin[[i]]), by="id", type="left")
+}
+```
+
+```{r t0maxyears}
+##################################################################################################
+#Min of t0maxmin by year for id (region || cluster) in order to check for regional differences
+t0maxyears <- list()
+for(i in 1:length(a0)){
+t0maxyears[[i]] <- as.data.frame(a0[[i]] %>% dplyr::group_by(id) %>% dplyr::summarise(t0maxyears= min(t0maxmin,na.rm=T)))
+}
+names(t0maxyears) <- names(a0)
+
+for(i in 1:length(a0)){
+  a0[[i]] <- join_all(list(a0[[i]], t0maxyears[[i]]), by="id", type="left")
+}
+```
+
+```{r t0maxregion, eval=FALSE}
+#ONLY NECESSARY WHEN USING INDIVIDUAL SITES
+##################################################################################################
+#Min of t0maxmin by region in order to check for regional differences
+t0maxregion <- list()
+for(i in 1:length(a0)){
+t0maxregion[[i]] <- as.data.frame(a0[[i]] %>% dplyr::group_by(region) %>% dplyr::summarise(t0maxregion= min(t0maxmin,na.rm=T)))
+}
+names(t0maxregion) <- names(a0)
+
+for(i in 1:length(a0)){
+  a0[[i]] <- join_all(list(a0[[i]], t0maxregion[[i]]), by="region", type="left")
+}
+```
+
+```{r t0maxcluster, eval=FALSE}
+#ONLY NECESSARY WHEN USING INDIVIDUAL SITES
+##################################################################################################
+#Min of t0maxmin by cluster id in order to check for regional differences
+t0maxclust <- list()
+for(i in 1:length(a0)){
+t0maxclust[[i]] <- as.data.frame(a0[[i]] %>% dplyr::group_by(cluster) %>% dplyr::summarise(t0maxclust= min(t0maxmin,na.rm=T)))
+}
+names(t0maxclust) <- names(a0)
+
+for(i in 1:length(a0)){
+  a0[[i]] <- join_all(list(a0[[i]], t0maxclust[[i]]), by="cluster", type="left")
+}
+```
+
+```{r DD for only a0, eval=FALSE}
+##################################################################################################
+#Degree days DD = number of hours over t0max per week preceding a0
+
+for(i in 1:length(a0)){
+  for(j in 1:length(a0[[i]][,1])){
+    DD <- numeric()
+      for(x in 1:length(thourly)){
+       #if(thourly[[x]]$cluster[1] == a0[[i]]$cluster[j]){
+        if(thourly[[x]]$region[1] == a0[[i]]$id[j]){
+          DD <-  c(DD,sum(as.numeric(thourly[[x]]$temphour[(which(thourly[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):(which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))])>a0[[i]]$t0maxmin[j])) #(HINT: 24 hours * 7 days)
+       }
+      }
+    print(DD)
+    a0[[i]]$DD[j] <- mean(DD, na.rm=T)
+  }
+}
+```
+
+```{r T7n for only a0, eval=FALSE}
+##################################################################################################
+#T7n = mean temperatures in 7 days before a0
+#for(i in 1:length(a0)){
+#  for(j in 1:length(a0[[i]][,1])){
+#    T7n <- numeric()
+#      for(x in 1:length(thourly)){
+#       if(thourly[[x]]$cluster[1] == a0[[i]]$cluster[j]){
+#          T7n <-  c(T7n,thourly[[x]]$temphour[(which(thourly[[x]]$datetimenum == #a0[[i]][,1][j])-(24*7)):(which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))]) #(HINT: 24 hours * 7 days)
+#       }
+#      }
+#    print(T7n)
+#    a0[[i]]$T7n[j] <- mean(T7n, na.rm=T)
+#  }
+#}
+
+# mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))
+for(i in 1:length(a0)){
+  for(j in 1:length(a0[[i]][,1])){
+    T7n <- numeric()
+      for(x in 1:length(tmax)){
+       #if(tmax[[x]]$cluster[1] == a0[[i]]$cluster[j]){
+        if(thourly[[x]]$region[1] == a0[[i]]$id[j]){
+          T7n <-  c(T7n,tmax[[x]]$maxtempday[(which(tmax[[x]]$datetime == a0[[i]][,1][j])-(7)):(which(tmax[[x]]$datetime == a0[[i]][,1][j]))]) #(HINT: 7 days since daily temp data)
+       }
+      }
+    print(T7n)
+    a0[[i]]$T7n[j] <- mean(T7n, na.rm=T)
+  }
+}
+```
+
+```{r Ii for only a0, eval=FALSE}
+##################################################################################################
+#Immigration Index for the a0 (Tedeschi et al.)
+#Ii = (T7n - T7th) + DD
+#   = mean of max in 7 days before a0 (T7n) - absolute highest temp in week before a0 (t0max) + hours per week above t0max (DD)
+for(i in 1:length(a0)){
+  for(j in 1:length(a0[[i]][,1])){
+    a0[[i]]$Ii[j] <- (a0[[i]]$T7n[j] - a0[[i]]$t0max[j]) + a0[[i]]$DD[j]
+  }
+}
+```
+
+```{r ENTERING DESIRED TEMPSUMLIST INDEX}
+#Index of tempsumlist of dataset you want to look at #########################################
+                                          x<-1
+##############################################################################################
+```
+
+```{r tmax, DD, Ii for thourly, eval=FALSE}
+#Calculating max temp per day (tmax) and hours over t0max per day (DD)
+for(i in 1:length(thourly)){
+  thourly[[i]]$DD <- NA
+  thourly[[i]]$tmax <- NA
+  for(j in 24:length(thourly[[i]][,3])){
+    for(x in x){  #just for one dataset (=x) of tempsumlist
+      for(y in 1:length(t0maxyears[[x]][,1])){
+      if(thourly[[i]]$region[j] == t0maxyears[[x]]$id[y]){
+      thourly[[i]]$DD[(j-24):j] <- sum(as.numeric(thourly[[i]]$temphour[(j-(24)):j])>t0maxyears[[x]]$t0maxyears[y])
+      thourly[[i]]$tmax[(j-24):j] <- max(thourly[[i]]$temphour[(j-(24)):j])
+        }
+      }
+    }
+  }
+}
+
+#Immigration Index for all weather station and hours in the entire period from 2013-2016
+#Ii = T7n(mean of 7 day max temps) - T7th(t0max) + DD(mean of daily hours over t0max per 7 days)
+#for(i in 1:length(thourly)){
+#  thourly[[i]]$Ii <- NA
+#  for(j in 168:length(thourly[[i]][,3])){
+#    for(x in x){  #just for one dataset of tempsumlist
+#      for(y in 1:length(t0maxyears[[x]][,1])){
+#      if(t0maxyears[[x]]$id[y] == thourly[[i]]$region[j]){
+#      thourly[[i]]$Ii[(j-(24*7)):j] <- (mean(thourly[[i]]$tmax[(j-(24*7)):j]) - #t0maxyears[[x]]$t0maxyears[y]) +
+#          mean((thourly[[i]]$DD[(j-(24*7)):j])>t0maxyears[[x]]$t0maxyears[y])
+#        }
+#      }
+#    }
+#  }
+#}
+```
+
+```{r Ii region, eval=FALSE}
+#Ii aggregated for each id (taking means of all stations within the same id (region || cluster))
+thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
+thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T), ddmean=mean(DD,na.rm=T), tmaxmean=mean(tmax, na.rm=T)))
+
+names(t0maxyears[[x]]) <- c("region", "t0maxyears") #rename for use in join_all
+thourlyregion <- join_all(list(thourlyregion, t0maxyears[[x]]), by="region", type="left")
+thourlyregion$Ii <- NA
+
+thourlyregion <- split(thourlyregion, thourlyregion$region) #combine dataframes back into list
+
+
+for(i in 1:length(thourlyregion)){
+  for(j in 168:length(thourlyregion[[i]][,1])){
+  thourlyregion[[i]]$Ii[(j-(24*7)):j] <- (mean(thourlyregion[[i]]$tmaxmean[(j-(24*7)):j]) - thourlyregion[[i]]$t0maxyears[j]) + mean((thourlyregion[[i]]$ddmean[(j-(24*7)):j])>thourlyregion[[i]]$t0maxyears[j])
+  }
+}
+```
+
+```{r tmax, DD, Ii region}
+thourlyregion <- dplyr::bind_rows(thourlyregion) #combine lists to 1 dataframe for dplyr
+names(t0maxyears[[x]]) <- c("region", "t0maxyears") #rename for use in join_all
+thourlyregion <- join_all(list(thourlyregion, t0maxyears[[x]]), by="region", type="left")
+thourlyregion <- split(thourlyregion, thourlyregion$region) #combine dataframes back into list
+
+for(i in 1:length(thourlyregion)){
+  thourlyregion[[i]]$DD <- NA
+  thourlyregion[[i]]$tmax <- NA
+  for(j in 24:length(thourlyregion[[i]][,1])){
+    thourlyregion[[i]]$DD[(j-24):j] <- sum(as.numeric(thourlyregion[[i]]$temphourmean[(j-(24)):j])>thourlyregion[[i]]$t0maxyears[j])
+      thourlyregion[[i]]$tmax[(j-24):j] <- max(thourlyregion[[i]]$temphourmean[(j-(24)):j])
+  }
+}
+
+for(i in 1:length(thourlyregion)){
+  thourlyregion[[i]]$Ii <- NA
+  for(j in 168:length(thourlyregion[[i]][,1])){
+  thourlyregion[[i]]$Ii[(j-(24*7)):j] <- (mean(thourlyregion[[i]]$tmax[(j-(24*7)):j]) - thourlyregion[[i]]$t0maxyears[j]) + mean((thourlyregion[[i]]$DD[(j-(24*7)):j])>thourlyregion[[i]]$t0maxyears[j])
+  }
+}
+```
+
+```{r Ii cluster, eval=FALSE}
+#Ii aggregated for each id (taking means of all stations within the same id (region || cluster))
+thourlycluster <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
+thourlycluster <- as.data.frame(thourlycluster %>% dplyr::group_by(datetime,datetimenum,cluster) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T), ddmean=mean(DD,na.rm=T), tmaxmean=mean(tmax, na.rm=T)))
+
+names(t0maxyears[[x]]) <- c("cluster", "t0maxyears") #rename for use in join_all
+thourlyregion <- join_all(list(thourlycluster, t0maxyears[[x]]), by="cluster", type="left")
+thourlycluster$Ii <- NA
+
+thourlycluster <- split(thourlycluster, thourlycluster$cluster) #combine dataframes back into list
+
+for(i in 1:length(thourlycluster)){
+  for(j in 168:length(thourlycluster[[i]][,1])){
+  thourlycluster[[i]]$Ii[(j-(24*7)):j] <- (mean(thourlycluster[[i]]$tmaxmean[(j-(24*7)):j]) - thourlycluster[[i]]$t0maxyears[j]) + mean((thourlycluster[[i]]$ddmean[(j-(24*7)):j])>thourlycluster[[i]]$t0maxyears[j])
+  }
+}
+```
+
+```{r base plots}
+Sys.setlocale("LC_TIME", "English") # to match English date structure
+#Region
+par(oma=c(4,2,2,2))
+par(mfrow=c(3,2))
+for(j in x){
+for(i in 1:length(thourlyregion)){
+par(mar=c(5,4,4,5)+.1)
+plot(thourlyregion[[i]]$datetime, thourlyregion[[i]]$Ii, main=names(thourlyregion[i]), type="l", ylab="Immigration Index (Ii)",xlab="", ylim=c(-15,40),col="darkgrey",xaxt="n")
+abline(h=0, col="darkgrey")
+
+for(y in c("2013","2014","2015","2016")){
+tmp <- subset(thourlyregion[[i]], format(datetime, "%Y") %in% c(y))
+abline(v=as.POSIXct(tmp$datetime[which(tmp$Ii > 0)[1]],format="%Y-%m-%d %H:%M%S"), col="darkgrey",lty=2)
+abline(v=as.POSIXct(tmp$datetime[which(tmp$temphourmean >= thourlyregion[[i]]$t0maxyears[1])[1]],format="%Y-%m-%d %H:%M%S"), col=adjustcolor("red",0.3),lty=2)
+}
+
+points(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$date, subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence * 40,col = adjustcolor(ifelse(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence > 0,'blue','red'),0.5), pch=16,xaxt="n")
+text(as.POSIXct("2016-06-01"), thourlyregion[[i]]$t0maxyears[1]+1.5, "t0max", col = "red") 
+text(as.POSIXct("2013-02-01"), 0+1.5, "Ii=0", col = "black") 
+text(as.POSIXct("2014-11-01"), 35, paste("t0max= ",round(thourlyregion[[i]]$t0maxyears[1],digits=2)," °C"))
+####x axis###
+minor <- seq(as.POSIXct("2013-01-01", format = "%Y-%m-%d"), tail(thourlyregion[[i]]$datetime, 1),
+             by = "1 months")
+labDates <- seq(as.POSIXct("2013-01-01", format = "%Y-%m-%d"),tail(thourlyregion[[i]]$datetime,1), by = "2 months")
+axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = labDates, format = "%b", las = 2)
+axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = minor, labels = FALSE, tcl = -0.25)
+axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, format = "%Y",las=2, line=2,lty=0)
+###y temperature###
+lines(thourlyregion[[i]]$datetime, thourlyregion[[i]]$temphourmean,yaxt="n",xaxt="n", ylab="",xlab="",col=adjustcolor("red",0.3), type="l", ylim=c(-15,40))
+axis(4)
+abline(h=round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red")
+mtext("Mean Hourly Temperature °C",side=4,line=3,cex=0.7)
+
+}
+title(names(tempsumlist)[j], outer=T,cex.main=2)
+}
+###legend###
+par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
+plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
+legend("bottom", c("Ii","T [°C]","1st Ii > 0","1st T > t0max","Presence", "Absence"), col=c("darkgrey","red","darkgrey","red","blue","red"),lty=c(1,1,2,2,NA,NA),pch=c(NA,NA,NA,NA,16,16),bty="n",cex=1,horiz = T)
+
+
+
+#Cluster INCOMPLETE
+par(oma=c(0,0,2,0))
+par(mfrow=c(3,3))
+for(j in 1:x){
+for(i in 1:length(thourlyclust)){
+plot(thourlyclust[[i]]$datetime, thourlyclust[[i]]$Ii, main=names(thourlyclust[i]), type="l", ylab="Immigration Index",xlab="Date", ylim=c(-15,25),col="blue")
+abline(h=0, col="red")
+points(subset(tempsumlist[[j]], cluster==names(thourlyclust)[i])$date, subset(tempsumlist[[j]], cluster==names(thourlyclust)[i])$abundance, pch=16)
+legend("topright", legend=c(paste("t0max= ",round(t0maxyears[[j]][,2][i],digits=2))))
+}
+  title(names(tempsumlist)[j], outer=T)
+}
+```
+
+```{r ggplot2}
+library(gridExtra)
+library(grid)
+library(scales)
+
+#Region  ##########################################################################
+pl <- lapply(1:6, function(i)
+ggplot()+  
+geom_line(data=thourlyregion[[i]],aes(x=thourlyregion[[i]]$datetime,y=thourlyregion[[i]]$Ii),size=0.5, alpha=0.5) + 
+
+geom_line(data=thourlyregion[[i]],aes(x=thourlyregion[[i]]$datetime,y=thourlyregion[[i]]$temphourmean),size=0.5, alpha=0.5, col="red") +
+  
+ylim(-10,40) + 
+
+geom_point(data=subset(tempsumlist[[x]], region==names(thourlyregion)[i]),
+           aes(x=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$date, y=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$abundance,color=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$abundance > 0),alpha=0.3) +
+
+scale_colour_manual(name = '+ Presence', values = setNames(c('darkblue','red'),c(T, F)),guide=FALSE) +
+geom_hline(yintercept = 0, col="blue") +
+geom_hline(yintercept = round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red") +
+
+xlab("Date") +
+ylab("Immigration Index") +
+theme_light() + 
+ggtitle(names(thourlyregion[i])) +
+annotate(geom="text", x=as.POSIXct("2016-03-01"), y=20, label = paste("t0max=",round(thourlyregion[[i]]$t0maxyears[1],digits=2)), fontface="italic")
+#scale_x_datetime(labels=date_format("%Y-%m"), breaks=("1 year"), minor_breaks=("1 month"))
+)
+title1=textGrob(names(tempsumlist)[x], gp=gpar(fontface="bold",cex=1.5)) #adjust main title
+marrangeGrob(pl,ncol=2,nrow=3,top=title1) #used to multiplot (like par(mfrow))
+#Warning messages due to ylim cutting off some extreme abundance values
+
+
+#Cluster #############################################################################
+pl <- lapply(1:9, function(i) ggplot(thourlyclust[[i]],aes(x=thourlyclust[[i]]$datetime,y=thourlyclust[[i]]$Ii)) + 
+xlab("Date") +
+ylab("Immigration Index") +
+geom_line(size=0.5, alpha=0.5) + ylim(-15,30) +
+geom_point(data=subset(tempsumlist[[x]], cluster==names(thourlyclust)[i]),
+           aes(x=subset(tempsumlist[[x]], cluster==names(thourlyclust)[i])$date, y=subset(tempsumlist[[x]], cluster==names(thourlyclust)[i])$abundance,color=subset(tempsumlist[[x]], cluster==names(thourlyclust)[i])$abundance > 0),alpha=0.3) +
+scale_colour_manual(name = '+ Presence', values = setNames(c('darkblue','red'),c(T, F)),guide=FALSE) +
+geom_hline(yintercept = 0, col="red") +
+theme_light() + 
+ggtitle(names(thourlyclust[i])) +
+annotate(geom="text", x=as.POSIXct("2016-03-01"), y=30, label = paste("t0max=",round(thourlyclust[[i]]$t0maxyears[1],digits=2)), fontface="italic")
+)
+title1=textGrob(names(tempsumlist)[x], gp=gpar(fontface="bold",cex=1.5)) #adjust main title
+marrangeGrob(pl,ncol=3,nrow=3,top=title1) #used to multiplot (like par(mfrow))
+#Warning messages due to ylim of 30 cutting off some extreme abundance values
+#cluster 8 only has 1 station that has no data after 2013, resulting in the cut-off Ii line
+```
+
+```{r Ip}
+#Immigratd population Index (Tedeschi et al.)
+#pn - p(n-1)
+```
+
+## Save
+```{r save}
+save(
+tempsumlist,
+thourly,
+thourlyregion,
+
+  
+file="data/AP_tempsum.RData")
+```

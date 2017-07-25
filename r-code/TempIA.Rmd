@@ -26,15 +26,17 @@ knitr::opts_chunk$set(warning=FALSE) # suppresses library warnings
 ```
 
 
+# Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors
+  of apple proliferation disease, using a temperature-based immigration analysis -
+  Appendix A
 
-
-# Introduction
+## Introduction
 This document is an appendix to the article: ''Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis''.
 The document provides the calculation procedure for a temperature-based immigation analysis based on Tedeschi et al. (2012).
 
 
 
-# Data
+## Data
 ##### Loading data and libraries
 
 ```{r load_data}
@@ -164,7 +166,7 @@ tempsum <- join_all(list(tempsum, c.melPcomb,c.melF1comb,c.picPcomb,c.picF1comb)
 
 
 
-# Temperature-based immigration analysis
+## Temperature-based immigration analysis
 
 ##### Calculation of thresholds and indices
 
@@ -360,7 +362,7 @@ for(i in 1:length(a0)){
 
 
 7) T7n
-```{r T7n for only a0, eval=FALSE}
+```{r T7n for only a0}
 ############################################################################################
 # mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))
 for(i in 1:length(a0)){
@@ -380,7 +382,7 @@ for(i in 1:length(a0)){
 
 
 8) Ii
-```{r Ii for only a0, eval=FALSE}
+```{r Ii for only a0}
 ##################################################################################################
 #Immigration Index for the a0 
 #Ii = (T7n - T7th) + DD
@@ -398,7 +400,7 @@ for(i in 1:length(a0)){
 ##############################################################################################
 ```
 
-```{r tmax, DD, Ii for thourly, eval=FALSE}
+```{r tmax, DD, Ii for thourly}
 #Calculating max temp per day (tmax) and hours over t0max per day (DD)
 for(i in 1:length(thourly)){
   thourly[[i]]$DD <- NA
@@ -416,7 +418,7 @@ for(i in 1:length(thourly)){
 }
 ```
 
-```{r Ii region, eval=FALSE}
+```{r Ii region}
 #Ii aggregated for each id (taking means of all stations within the same id (region || cluster))
 thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
 thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T), ddmean=mean(DD,na.rm=T), tmaxmean=mean(tmax, na.rm=T)))
@@ -462,7 +464,7 @@ for(i in 1:length(thourlyregion)){
 
 #### Graphs
 
-```{r base plots, eval=FALSE, echo=TRUE}
+```{r base plots, echo=TRUE}
 Sys.setlocale("LC_TIME", "English") # to match English date structure
 #Region
 for(j in x){
@@ -548,7 +550,7 @@ legend("bottom", c("Ii","T[°C]","1st Ii>0","1st T>T7th","Presence", "Absence"),
 
 
 
-```{r ggplot2, eval=FALSE}
+```{r ggplot2}
 library(gridExtra)
 library(grid)
 library(scales)
@@ -583,13 +585,14 @@ marrangeGrob(pl,ncol=2,nrow=3,top=title1) #used to multiplot (like par(mfrow))
 
 
 
-\newpage
+\pagebreak
+
 # References
 Tedeschi R., Baldessari M., Mazzoni V., Trona F. and Angeli G. (2012). Population dynamics of *Cacopsylla melanoneura* (Hemiptera: Psyllidae) in northeast Italy and its role in the apple proliferation epidemiology in apple orchards. - Journal of Economic Entomology 105, 322–328.
 
 \pagebreak
 
-# Session info
+## Session info
 ```{r, echo=FALSE, eval=FALSE}
 devtools::session_info()
 ```

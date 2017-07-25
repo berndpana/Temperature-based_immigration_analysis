@@ -1,43 +1,14 @@
----
-title: Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors
-  of apple proliferation disease, using a temperature-based immigration analysis -
-  Appendix A
-author: "Bernd Panassiti, Nicolas Sander"
-date: 'created: 25.10.2016, last modified: `r format(Sys.Date(), format="%d.%m.%Y")`'
-output:
-  md_document:
-    variant: markdown_github
-  html_document:
-  pdf_document:
-    fig_caption: yes
-    keep_tex: yes
-header-includes: \usepackage{graphicx}
----
+Introduction
+============
 
+This document is an appendix to the article: ''Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis''. The document provides the calculation procedure for a temperature-based immigation analysis based on Tedeschi et al. (2012).
 
-```{r setup, echo=FALSE,eval=TRUE,warning=FALSE,message=FALSE}
-rm(list=ls(all=TRUE))
-library(knitr) # for creating html-file
-knitr::opts_knit$set(root.dir='../') # definining working directory; or normalizePath('../')
-knitr::opts_chunk$set(fig.align='center') # aligns all figures
-knitr::opts_chunk$set(echo=TRUE) # shows r-code
-knitr::opts_chunk$set(message=FALSE) # suppresses library outputs
-knitr::opts_chunk$set(warning=FALSE) # suppresses library warnings
-```
+Data
+====
 
-
-
-
-# Introduction
-This document is an appendix to the article: ''Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis''.
-The document provides the calculation procedure for a temperature-based immigation analysis based on Tedeschi et al. (2012).
-
-
-
-# Data
 ##### Loading data and libraries
 
-```{r load_data}
+``` r
 source("r-code/00_settings.R")
 detachAllPackages() #detach("package:plyr", unload=TRUE) # makes problems with the group_by function
 load(file="data/AP_rawdata_vector.RData")
@@ -46,7 +17,7 @@ load(file="data/AP_workingdata_vector.RData")
 set.seed(2015)
 ```
 
-```{r load_libraries}
+``` r
 if(!require(ggplot2))
 {
   install.packages("ggplot2", repos = mir)
@@ -88,12 +59,12 @@ if(!require(qtlcharts))
 
 #### Data preparation
 
-P = parents, re-emigrants, overwintering vectors  
-F1 = offspring, emigrants  
-B = vector sampling method: beating tray  
+P = parents, re-emigrants, overwintering vectors
+F1 = offspring, emigrants
+B = vector sampling method: beating tray
 YT = vector sampling method: yellow traps
 
-```{r data_preperation,results="hide"}
+``` r
 tempsum <- data.frame()
 
 #pulling out site_id,,cluster, year, date and abundance for each insect_id and insect_stage_id
@@ -162,14 +133,14 @@ list2env(tempsumlist,environment())  #overwrite single dataframes in the global 
 tempsum <- join_all(list(tempsum, c.melPcomb,c.melF1comb,c.picPcomb,c.picF1comb), type="full")
 ```
 
-
-
-# Temperature-based immigration analysis
+Temperature-based immigration analysis
+======================================
 
 ##### Calculation of thresholds and indices
 
-1) a0 and aMax
-```{r a0 and aMax}
+1.  a0 and aMax
+
+``` r
 ##################################################################################################
 #CALCULATING A0's = Date of first occurence for each site and year (+ species, generation and method)
 a0 <-lapply(tempsumlist, function(j){
@@ -210,7 +181,7 @@ for(i in 1:length(aMax)){ #Adding region||cluster||site_id to aMax as id
 }
 ```
 
-```{r thourly & thourlyregion}
+``` r
 ##################################################################################################
 thourly <- weatherStationsHourly_split
 thourly <- lapply(thourly, function(x) x[,-c(6:11)]) #removing unneeded columns
@@ -227,12 +198,11 @@ for(i in 1:length(thourly)){
 thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
 thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T)))
 thourlyregion <- split(thourlyregion, thourlyregion$region) #combine dataframes back into list
-
 ```
 
+1.  Tmax and Tmedian
 
-2) Tmax and Tmedian
-```{r tmax and tmedian}
+``` r
 ##################################################################################################
 #CALCULATING TMax = Max. daily temperature & tmedian from hourly mean temps
 tmax <- list()
@@ -278,9 +248,9 @@ for(i in 1:nrow(clusterStations)){
 }
 ```
 
+1.  T0max
 
-3) T0max
-```{r t0max,results="hide"}
+``` r
 ##################################################################################################
 #T0Max = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site)
 #check a0 and then filter through txmax and tmedian at corresponding weatherstation (from cluster)
@@ -303,9 +273,9 @@ for(i in 1:length(a0)){ #loop through all species,generation and method
 }
 ```
 
+1.  T0maxmin and T0maxmean
 
-4) T0maxmin and T0maxmean
-```{r t0maxmin and t0maxmean}
+``` r
 ##################################################################################################
 #Minimum of all t0max/t0mean that belong to the same site over several years
 t0maxmin <- list()
@@ -319,9 +289,9 @@ for(i in 1:length(a0)){
 }
 ```
 
+1.  T0maxyears
 
-5) T0maxyears
-```{r t0maxyears}
+``` r
 ##################################################################################################
 #Min of t0maxmin by year for id (region || cluster) in order to check for regional differences
 t0maxyears <- list()
@@ -335,10 +305,9 @@ for(i in 1:length(a0)){
 }
 ```
 
+1.  DD
 
-
-6) DD
-```{r DD for only a0,results="hide"}
+``` r
 ##################################################################################################
 #Degree days DD = number of hours over t0max per week preceding a0
 
@@ -357,10 +326,9 @@ for(i in 1:length(a0)){
 }
 ```
 
+1.  T7n
 
-
-7) T7n
-```{r T7n for only a0, eval=FALSE}
+``` r
 ############################################################################################
 # mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))
 for(i in 1:length(a0)){
@@ -378,9 +346,9 @@ for(i in 1:length(a0)){
 }
 ```
 
+1.  Ii
 
-8) Ii
-```{r Ii for only a0, eval=FALSE}
+``` r
 ##################################################################################################
 #Immigration Index for the a0 
 #Ii = (T7n - T7th) + DD
@@ -392,13 +360,13 @@ for(i in 1:length(a0)){
 }
 ```
 
-```{r ENTERING DESIRED TEMPSUMLIST INDEX}
+``` r
 #Index of tempsumlist of dataset you want to look at #########################################
                                           x<-1
 ##############################################################################################
 ```
 
-```{r tmax, DD, Ii for thourly, eval=FALSE}
+``` r
 #Calculating max temp per day (tmax) and hours over t0max per day (DD)
 for(i in 1:length(thourly)){
   thourly[[i]]$DD <- NA
@@ -416,7 +384,7 @@ for(i in 1:length(thourly)){
 }
 ```
 
-```{r Ii region, eval=FALSE}
+``` r
 #Ii aggregated for each id (taking means of all stations within the same id (region || cluster))
 thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
 thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T), ddmean=mean(DD,na.rm=T), tmaxmean=mean(tmax, na.rm=T)))
@@ -435,7 +403,7 @@ for(i in 1:length(thourlyregion)){
 }
 ```
 
-```{r tmax, DD, Ii region}
+``` r
 thourlyregion <- dplyr::bind_rows(thourlyregion) #combine lists to 1 dataframe for dplyr
 names(t0maxyears[[x]]) <- c("region", "t0maxyears") #rename for use in join_all
 thourlyregion <- join_all(list(thourlyregion, t0maxyears[[x]]), by="region", type="left")
@@ -458,11 +426,9 @@ for(i in 1:length(thourlyregion)){
 }
 ```
 
-
-
 #### Graphs
 
-```{r base plots, eval=FALSE, echo=TRUE}
+``` r
 Sys.setlocale("LC_TIME", "English") # to match English date structure
 #Region
 for(j in x){
@@ -545,10 +511,7 @@ legend("bottom", c("Ii","T[°C]","1st Ii>0","1st T>T7th","Presence", "Absence"),
 }
 ```
 
-
-
-
-```{r ggplot2, eval=FALSE}
+``` r
 library(gridExtra)
 library(grid)
 library(scales)
@@ -578,69 +541,60 @@ annotate(geom="text", x=as.POSIXct("2016-03-01"), y=20, label = paste("t0max=",r
 )
 title1=textGrob(names(tempsumlist)[x], gp=gpar(fontface="bold",cex=1.5)) #adjust main title
 marrangeGrob(pl,ncol=2,nrow=3,top=title1) #used to multiplot (like par(mfrow))
-
 ```
-
-
 
 \newpage
-# References
+
+References
+==========
+
 Tedeschi R., Baldessari M., Mazzoni V., Trona F. and Angeli G. (2012). Population dynamics of *Cacopsylla melanoneura* (Hemiptera: Psyllidae) in northeast Italy and its role in the apple proliferation epidemiology in apple orchards. - Journal of Economic Entomology 105, 322–328.
 
-\pagebreak
+Session info
+============
 
-# Session info
-```{r, echo=FALSE, eval=FALSE}
-devtools::session_info()
-```
+| setting  | value                        |
+|----------|------------------------------|
+| version  | R version 3.3.1 (2016-06-21) |
+| system   | x86\_64, darwin13.4.0        |
+| ui       | RStudio (1.0.143)            |
+| language | (EN)                         |
+| collate  | en\_US.UTF-8                 |
+| tz       | Europe/Rome                  |
 
-
-setting  | value  
--------- | -----------------------------  
-version  | R version 3.3.1 (2016-06-21)   
-system   | x86_64, darwin13.4.0            
-ui       | RStudio (1.0.143)                       
-language | (EN)                         
-collate  | en_US.UTF-8                  
-tz       | Europe/Rome   
-
-
-
-package     | * | version | date       | source  
------------ | - | --------|------------|---------------  
-assertthat  |   | 0.1     | 2013-12-06 | CRAN (R 3.3.0)
- backports  |   | 1.0.5   | 2017-01-18 | CRAN (R 3.3.2)
- colorspace |   | 1.3-2   | 2016-12-14 | CRAN (R 3.3.2)
- DBI        |   | 0.5-1   | 2016-09-10 | CRAN (R 3.3.0)
- devtools   |   | 1.12.0  | 2016-06-24 | CRAN (R 3.3.0)
- digest     |   | 0.6.12  | 2017-01-27 | CRAN (R 3.3.1)
- dplyr      | * | 0.5.0   | 2016-06-24 | CRAN (R 3.3.0)
- evaluate   |   | 0.10    | 2016-10-11 | cran (@0.10)  
- ggplot2    | * | 2.2.1   | 2016-12-30 | CRAN (R 3.3.2)
- gridExtra  | * | 2.2.1   | 2016-02-29 | CRAN (R 3.3.0)
- gtable     |   | 0.2.0   | 2016-02-26 | CRAN (R 3.3.0)
- htmltools  |   | 0.3.5   | 2016-03-21 | CRAN (R 3.3.0)
- knitr      |   | 1.15.1  | 2016-11-22 | CRAN (R 3.3.2)
- labeling   |   | 0.3     | 2014-08-23 | CRAN (R 3.3.0)
- lattice    |   | 0.20-34 | 2016-09-06 | CRAN (R 3.3.0)
- lazyeval   |   | 0.2.0   | 2016-06-12 | CRAN (R 3.3.0)
- magrittr   |   | 1.5     | 2014-11-22 | CRAN (R 3.3.0)
- MASS       | * | 7.3-45  | 2016-04-21 | CRAN (R 3.3.1)
- memoise    |   | 1.0.0   | 2016-01-29 | CRAN (R 3.3.0)
- munsell    |   | 0.4.3   | 2016-02-13 | CRAN (R 3.3.0)
- plyr       | * | 1.8.4   | 2016-06-08 | CRAN (R 3.3.0)
- qtlcharts  | * | 0.7-8   | 2016-06-28 | CRAN (R 3.3.0)
- R6         |   | 2.2.0   | 2016-10-05 | cran (@2.2.0) 
- Rcpp       |   | 0.12.9  | 2017-01-14 | CRAN (R 3.3.2)
- rmarkdown  |   | 1.3     | 2016-12-21 | CRAN (R 3.3.2)
- rprojroot  |   | 1.2     | 2017-01-16 | CRAN (R 3.3.2)
- rsconnect  |   | 0.7     | 2016-12-21 | CRAN (R 3.3.2)
- scales     | * | 0.4.1   | 2016-11-09 | CRAN (R 3.3.2)
- sp         |   | 1.2-4   | 2016-12-22 | CRAN (R 3.3.2)
- stringi    | * | 1.1.2   | 2016-10-01 | cran (@1.1.2) 
- stringr    |   | 1.1.0   | 2016-08-19 | cran (@1.1.0) 
- tibble     |   | 1.2     | 2016-08-26 | CRAN (R 3.3.0)
- withr      |   | 1.0.2   | 2016-06-20 | CRAN (R 3.3.0)
- yaml       |   | 2.1.14  | 2016-11-12 | cran (@2.1.14)
-
-
+| package    | \*  | version | date       | source         |
+|------------|-----|---------|------------|----------------|
+| assertthat |     | 0.1     | 2013-12-06 | CRAN (R 3.3.0) |
+| backports  |     | 1.0.5   | 2017-01-18 | CRAN (R 3.3.2) |
+| colorspace |     | 1.3-2   | 2016-12-14 | CRAN (R 3.3.2) |
+| DBI        |     | 0.5-1   | 2016-09-10 | CRAN (R 3.3.0) |
+| devtools   |     | 1.12.0  | 2016-06-24 | CRAN (R 3.3.0) |
+| digest     |     | 0.6.12  | 2017-01-27 | CRAN (R 3.3.1) |
+| dplyr      | \*  | 0.5.0   | 2016-06-24 | CRAN (R 3.3.0) |
+| evaluate   |     | 0.10    | 2016-10-11 | cran (@0.10)   |
+| ggplot2    | \*  | 2.2.1   | 2016-12-30 | CRAN (R 3.3.2) |
+| gridExtra  | \*  | 2.2.1   | 2016-02-29 | CRAN (R 3.3.0) |
+| gtable     |     | 0.2.0   | 2016-02-26 | CRAN (R 3.3.0) |
+| htmltools  |     | 0.3.5   | 2016-03-21 | CRAN (R 3.3.0) |
+| knitr      |     | 1.15.1  | 2016-11-22 | CRAN (R 3.3.2) |
+| labeling   |     | 0.3     | 2014-08-23 | CRAN (R 3.3.0) |
+| lattice    |     | 0.20-34 | 2016-09-06 | CRAN (R 3.3.0) |
+| lazyeval   |     | 0.2.0   | 2016-06-12 | CRAN (R 3.3.0) |
+| magrittr   |     | 1.5     | 2014-11-22 | CRAN (R 3.3.0) |
+| MASS       | \*  | 7.3-45  | 2016-04-21 | CRAN (R 3.3.1) |
+| memoise    |     | 1.0.0   | 2016-01-29 | CRAN (R 3.3.0) |
+| munsell    |     | 0.4.3   | 2016-02-13 | CRAN (R 3.3.0) |
+| plyr       | \*  | 1.8.4   | 2016-06-08 | CRAN (R 3.3.0) |
+| qtlcharts  | \*  | 0.7-8   | 2016-06-28 | CRAN (R 3.3.0) |
+| R6         |     | 2.2.0   | 2016-10-05 | cran (@2.2.0)  |
+| Rcpp       |     | 0.12.9  | 2017-01-14 | CRAN (R 3.3.2) |
+| rmarkdown  |     | 1.3     | 2016-12-21 | CRAN (R 3.3.2) |
+| rprojroot  |     | 1.2     | 2017-01-16 | CRAN (R 3.3.2) |
+| rsconnect  |     | 0.7     | 2016-12-21 | CRAN (R 3.3.2) |
+| scales     | \*  | 0.4.1   | 2016-11-09 | CRAN (R 3.3.2) |
+| sp         |     | 1.2-4   | 2016-12-22 | CRAN (R 3.3.2) |
+| stringi    | \*  | 1.1.2   | 2016-10-01 | cran (@1.1.2)  |
+| stringr    |     | 1.1.0   | 2016-08-19 | cran (@1.1.0)  |
+| tibble     |     | 1.2     | 2016-08-26 | CRAN (R 3.3.0) |
+| withr      |     | 1.0.2   | 2016-06-20 | CRAN (R 3.3.0) |
+| yaml       |     | 2.1.14  | 2016-11-12 | cran (@2.1.14) |

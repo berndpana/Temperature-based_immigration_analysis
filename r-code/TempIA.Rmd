@@ -26,9 +26,7 @@ knitr::opts_chunk$set(warning=FALSE) # suppresses library warnings
 ```
 
 
-# Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors
-  of apple proliferation disease, using a temperature-based immigration analysis -
-  Appendix A
+# Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis - Appendix A
 
 ## Introduction
 This document is an appendix to the article: ''Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis''.
@@ -362,7 +360,7 @@ for(i in 1:length(a0)){
 
 
 7) T7n
-```{r T7n for only a0}
+```{r T7n for only a0,results="hide"}
 ############################################################################################
 # mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))
 for(i in 1:length(a0)){
@@ -464,7 +462,7 @@ for(i in 1:length(thourlyregion)){
 
 #### Graphs
 
-```{r base plots, echo=TRUE}
+```{r base plots, echo=TRUE,fig.height = 5,message=FALSE}
 Sys.setlocale("LC_TIME", "English") # to match English date structure
 #Region
 for(j in x){

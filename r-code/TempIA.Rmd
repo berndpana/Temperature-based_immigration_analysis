@@ -462,7 +462,7 @@ for(i in 1:length(thourlyregion)){
 
 #### Graphs
 
-```{r base plots, echo=TRUE,fig.height = 5,message=FALSE}
+```{r base plots, echo=TRUE,fig.height = 10,message=FALSE}
 Sys.setlocale("LC_TIME", "English") # to match English date structure
 #Region
 for(j in x){

@@ -5,3 +5,6 @@
 *.Rproj
 
 .Rhistory
+
+article/*
+

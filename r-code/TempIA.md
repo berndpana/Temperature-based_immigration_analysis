@@ -141,9 +141,19 @@ Temperature-based immigration analysis
 
 ##### Calculation of thresholds and indices
 
-The code below calculates the following thresholds and indices: \* **a0** = Date of first occurence for each site and year (+ species, generation and method) \* aMax = Date of max. abundance for each site (+ species, generation and method) \* thourly = Temperature for each hour for each weather station \* thourlyregion = \* TMax = Max. daily temperature & tmedian from hourly mean temps \* **T0Max** = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site) \* T0maxmin and T0maxmean: Minimum of all t0max/t0mean that belong to the same site over several years \* T0maxyears = Min of t0maxmin by year for id (region || cluster) in order to check for regional differences \* DD (degree days) = number of hours over t0max per week preceding a0 \* T7n = mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures)) \* **Ii** = Immigration Index for the a0; Ii = (T7n - T7th) + DD
+The code below calculates the following thresholds and indices: \* **a0** = Date of first occurence for each site and year (+ species, generation and method)
+\* aMax = Date of max. abundance for each site (+ species, generation and method)
+\* thourly = Temperature for each hour for each weather station
+\* thourlyregion = Temperature for each hour for each weather station summarized by region
+\* TMax = Max. daily temperature & tmedian from hourly mean temps
+\* **T0Max** = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site)
+\* T0maxmin and T0maxmean: Minimum of all t0max/t0mean that belong to the same site over several years
+\* T0maxyears = Min of t0maxmin by year for id (region || cluster) in order to check for regional differences
+\* DD (degree days) = number of hours over t0max per week preceding a0
+\* T7n = mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))
+\* **Ii** = Immigration Index for the a0; Ii = (T7n - T7th) + DD
 
-1.  a0 and aMax
+1. a0 and aMax
 
 ``` r
 ##################################################################################################
@@ -205,7 +215,7 @@ thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,dateti
 thourlyregion <- split(thourlyregion, thourlyregion$region) #combine dataframes back into list
 ```
 
-1.  Tmax and Tmedian
+2. Tmax and Tmedian
 
 ``` r
 ##################################################################################################
@@ -253,7 +263,7 @@ for(i in 1:nrow(clusterStations)){
 }
 ```
 
-1.  T0max
+3. T0max
 
 ``` r
 ##################################################################################################
@@ -278,7 +288,7 @@ for(i in 1:length(a0)){ #loop through all species,generation and method
 }
 ```
 
-1.  T0maxmin and T0maxmean
+4. T0maxmin and T0maxmean
 
 ``` r
 ##################################################################################################
@@ -294,7 +304,7 @@ for(i in 1:length(a0)){
 }
 ```
 
-1.  T0maxyears
+5. T0maxyears
 
 ``` r
 ##################################################################################################
@@ -310,7 +320,7 @@ for(i in 1:length(a0)){
 }
 ```
 
-1.  DD
+6. DD
 
 ``` r
 ##################################################################################################
@@ -331,7 +341,7 @@ for(i in 1:length(a0)){ # 1:4 - Cmel P and F1 and Cpicta P and F1
 }
 ```
 
-1.  T7n
+7. T7n
 
 ``` r
 ############################################################################################
@@ -351,7 +361,7 @@ for(i in 1:length(a0)){
 }
 ```
 
-1.  Ii
+8. Ii
 
 ``` r
 ##################################################################################################

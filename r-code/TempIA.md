@@ -124,7 +124,7 @@ tempsumlist <- list(c.melPcomb,c.melF1comb,c.picPcomb,c.picF1comb)
 names(tempsumlist) <- listnames
 
 
-###############DECIDE IF SUM BY REGION OR CLUSTER HERE! #########################
+############### DECIDE IF SUM BY REGION OR CLUSTER HERE! #########################
 #Sum by region
 for(i in 1:length(tempsumlist)){
 tempsumlist[[i]] <- as.data.frame(tempsumlist[[i]] %>% dplyr::group_by(date,year,region) %>% dplyr::summarise(abundance = sum(abundance,na.rm=T), presence=max(presence))) #combine all sites within same region at same date
@@ -141,11 +141,13 @@ Temperature-based immigration analysis
 
 ##### Calculation of thresholds and indices
 
+The code below calculates the following thresholds and indices: \* **a0** = Date of first occurence for each site and year (+ species, generation and method) \* aMax = Date of max. abundance for each site (+ species, generation and method) \* thourly = Temperature for each hour for each weather station \* thourlyregion = \* TMax = Max. daily temperature & tmedian from hourly mean temps \* **T0Max** = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site) \* T0maxmin and T0maxmean: Minimum of all t0max/t0mean that belong to the same site over several years \* T0maxyears = Min of t0maxmin by year for id (region || cluster) in order to check for regional differences \* DD (degree days) = number of hours over t0max per week preceding a0 \* T7n = mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures)) \* **Ii** = Immigration Index for the a0; Ii = (T7n - T7th) + DD
+
 1.  a0 and aMax
 
 ``` r
 ##################################################################################################
-#CALCULATING A0's = Date of first occurence for each site and year (+ species, generation and method)
+#CALCULATING a0
 a0 <-lapply(tempsumlist, function(j){
   sapply(split(j, list(j[,3],j[,2])), function(x){x[,1][which(x[,5]>0)[1]]}) #split by region||cluster||site + year and look for first date where insects are found
 })
@@ -166,7 +168,7 @@ for(i in 1:length(a0)){ #Adding region||cluster||site_id to a0 as id
 }
 
 ##################################################################################################
-#CALCULATING aMax's = Date of max. abundance for each site (+ species, generation and method)
+#CALCULATING aMax
 aMax <-lapply(tempsumlist, function(j){
   sapply(split(j, list(j[,3])), function(x){x[,1][which.max(x[,5])]}) #split by region||cluster||site and look for first date where max # of insects are found
 })
@@ -313,14 +315,14 @@ for(i in 1:length(a0)){
 ``` r
 ##################################################################################################
 #Degree days DD = number of hours over t0max per week preceding a0
-
-for(i in 1:length(a0)){
-  for(j in 1:length(a0[[i]][,1])){
+for(i in 1:length(a0)){ # 1:4 - Cmel P and F1 and Cpicta P and F1
+  for(j in 1:length(a0[[i]][,1])){ # numnber of total records
     DD <- numeric()
       for(x in 1:length(thourly)){
        #if(thourly[[x]]$cluster[1] == a0[[i]]$cluster[j]){
         if(thourly[[x]]$region[1] == a0[[i]]$region[j]){
-          DD <-  c(DD,sum(as.numeric(thourly[[x]]$temphour[(which(thourly[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):(which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))])>a0[[i]]$t0maxmin[j])) #(HINT: 24 hours * 7 days)
+          #DD <-  c(DD,sum(as.numeric(thourly[[x]]$temphour[(which(thourly[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):(which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))])>a0[[i]]$t0maxmin[j])) #(HINT: 24 hours * 7 days)
+          DD <-  c(DD,mean(as.numeric(thourly[[x]]$temphour[(which(thourly[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):(which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))])>a0[[i]]$t0maxmin[j])) #(HINT: 24 hours * 7 days)
        }
       }
     print(DD)
@@ -363,8 +365,17 @@ for(i in 1:length(a0)){
 }
 ```
 
+#### Exemplary graph for *Cacopsylla melanoneura* parental generation
+
 ``` r
-#Index of tempsumlist of dataset you want to look at #########################################
+#Index of tempsumlist of dataset you want to look at 
+# c.melPcomb:  x=1
+# c.melF1comb: x=2
+# c.picPcomb:  x=3
+# c.picF1comb: x=3
+
+
+##############################################################################################
                                           x<-1
 ##############################################################################################
 ```
@@ -428,8 +439,6 @@ for(i in 1:length(thourlyregion)){
   }
 }
 ```
-
-#### Graphs
 
 ``` r
 Sys.setlocale("LC_TIME", "English") # to match English date structure

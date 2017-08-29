@@ -11,16 +11,39 @@ Data
 
 ##### Loading data and libraries
 
-``` r
-source("r-code/00_settings.R")
-detachAllPackages() #detach("package:plyr", unload=TRUE) # makes problems with the group_by function
-load(file="data/AP_rawdata_vector.RData")
-load(file="data/AP_workingdata_clustering.RData")
-load(file="data/AP_workingdata_vector.RData")
-set.seed(2015)
-```
+TempIA.RData includes the following R-objects:
+
+-   c.melanoneuraPB
+
+-   c.melanoneuraF1B
+
+-   c.pictaPB
+
+-   c.pictaF1B
+
+-   c.melanoneuraPYT
+
+-   c.melanoneuraF1YT
+
+-   c.pictaPYT
+
+-   c.pictaF1YT
+
+-   modeldata.t *site\_id and cluster id*
+
+-   sitesInsectVector
+
+-   weatherStationsHourly\_split
+
+-   clusterStations
 
 ``` r
+source("r-code/00_settings.r")
+
+load(file="data/TempIA.RData")
+
+
+detachAllPackages() #detach("package:plyr", unload=TRUE) # makes problems with the group_by function
 if(!require(ggplot2))
 {
   install.packages("ggplot2", repos = mir)
@@ -58,6 +81,12 @@ if(!require(qtlcharts))
   install.packages("qtlcharts", repos = mir)
   require(qtlcharts)
 }
+
+if(!require(lubridate)) # date functions
+{
+  install.packages("lubridates", repos = mir)
+  require(lubridate)
+}
 ```
 
 #### Data preparation
@@ -70,7 +99,7 @@ YT = vector sampling method: yellow traps
 ``` r
 tempsum <- data.frame()
 
-#pulling out site_id,,cluster, year, date and abundance for each insect_id and insect_stage_id
+#pulling out site_id,cluster, year, date and abundance for each insect_id and insect_stage_id
 c.melPB <- c.melanoneuraPB[,c(2,3,4,5,6,10,11)]
 c.melF1B <- c.melanoneuraF1B[,c(2,3,4,5,6,10,11)]
 c.picPB <- c.pictaPB[,c(2,3,4,5,6,10,11)]
@@ -336,21 +365,33 @@ for(i in 1:length(a0)){
 
 ``` r
 ##################################################################################################
-#Degree days DD = number of hours over t0max per week preceding a0
+#Degree days DD = medium daily number of hours over t0max per week preceding a0
 for(i in 1:length(a0)){ # 1:4 - Cmel P and F1 and Cpicta P and F1
-  for(j in 1:length(a0[[i]][,1])){ # numnber of total records
+  for(j in 1:length(a0[[i]][,1])){ # number of total records
     DD <- numeric()
-      for(x in 1:length(thourly)){
-       #if(thourly[[x]]$cluster[1] == a0[[i]]$cluster[j]){
-        if(thourly[[x]]$region[1] == a0[[i]]$region[j]){
-          #DD <-  c(DD,sum(as.numeric(thourly[[x]]$temphour[(which(thourly[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):(which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))])>a0[[i]]$t0maxmin[j])) #(HINT: 24 hours * 7 days)
-          DD <-  c(DD,mean(as.numeric(thourly[[x]]$temphour[(which(thourly[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):(which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))])>a0[[i]]$t0maxmin[j])) #(HINT: 24 hours * 7 days)
+      for(x in 1:length(thourly)){ # x select the different stations (belonging to different regions) in thourly
+        if(thourly[[x]]$region[1] == a0[[i]]$region[j]){ # region weather station = region sampling location
+          
+          df <- thourly[[x]][
+                              (which(thourly[[x]]$datetimenum == a0[[i]][,1][j])-(24*7)):
+                              (which(thourly[[x]]$datetimenum == a0[[i]][,1][j]))
+                            ,c("datetime","temphour")]
+          
+          df <- df[df$temphour > a0[[i]]$t0maxmin[j],] # select hours during the 7 days before a0 where temp > t0max
+          DD <-  c(DD,nrow(df)/7) # number of hours / 7 days
+                  
+          print(paste(c(i,j,x)))
        }
       }
     print(DD)
     a0[[i]]$DD[j] <- mean(DD, na.rm=T)
   }
 }
+
+# *** Explaination loop *** #
+# - select vector, e.g. C. melanoneura parental generation (i)
+# - loop through survey records (j)
+# - select weather station in the same region (x)
 ```
 
 7. T7n

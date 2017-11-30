@@ -55,7 +55,7 @@ TempIA.RData includes the following R-objects:
 
 * c.pictaF1YT  
 
-* modeldata.t _site_id and cluster id_  
+* modeldata.t
 
 * sitesInsectVector  
 
@@ -475,7 +475,7 @@ for(i in 1:length(a0)){
 # c.melPcomb:  x=1
 # c.melF1comb: x=2
 # c.picPcomb:  x=3
-# c.picF1comb: x=3
+# c.picF1comb: x=4
 
 
 ##############################################################################################
@@ -499,9 +499,11 @@ for(i in 1:length(thourly)){
     }
   }
 }
-```
 
-```{r Ii region}
+
+
+
+
 #Ii aggregated for each id (taking means of all stations within the same id (region || cluster))
 thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
 thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T), ddmean=mean(DD,na.rm=T), tmaxmean=mean(tmax, na.rm=T)))
@@ -518,9 +520,12 @@ for(i in 1:length(thourlyregion)){
   thourlyregion[[i]]$Ii[(j-(24*7)):j] <- (mean(thourlyregion[[i]]$tmaxmean[(j-(24*7)):j]) - thourlyregion[[i]]$t0maxyears[j]) + mean((thourlyregion[[i]]$ddmean[(j-(24*7)):j])>thourlyregion[[i]]$t0maxyears[j])
   }
 }
-```
 
-```{r tmax, DD, Ii region}
+
+
+
+
+#tmax, DD, Ii region
 thourlyregion <- dplyr::bind_rows(thourlyregion) #combine lists to 1 dataframe for dplyr
 names(t0maxyears[[x]]) <- c("region", "t0maxyears") #rename for use in join_all
 thourlyregion <- join_all(list(thourlyregion, t0maxyears[[x]]), by="region", type="left")
@@ -541,14 +546,22 @@ for(i in 1:length(thourlyregion)){
   thourlyregion[[i]]$Ii[(j-(24*7)):j] <- (mean(thourlyregion[[i]]$tmax[(j-(24*7)):j]) - thourlyregion[[i]]$t0maxyears[j]) + mean((thourlyregion[[i]]$DD[(j-(24*7)):j])>thourlyregion[[i]]$t0maxyears[j])
   }
 }
-```
 
+
+```
 
 
 
 
 ```{r base plots, echo=TRUE,fig.height = 10,message=FALSE}
 Sys.setlocale("LC_TIME", "English") # to match English date structure
+
+
+graphtitleSpecies <- c("Cacopsylla melanoneura", "Cacopsylla melanoneura ","Cacopsylla picta","Cacopsylla picta")
+graphtitleType <- c("remigrants", "emigrants","remigrants","emigrants")
+
+mainTitle <- list(as.expression(bquote(~italic(.(graphtitleSpecies[x]))~~.(graphtitleType[x])),cex=cexmlabel2))
+
 #Region
 for(j in x){
 ###REGION 1-3
@@ -582,7 +595,7 @@ axis(4, cex.axis=2)
 abline(h=round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red")
 mtext("Mean Hourly Temperature °C",side=4,line=3,cex=1)
 }
-title("C. melanoneura P-generation", outer=T,cex.main=2)
+title(mainTitle, outer=T,cex.main=2)
 #title(names(tempsumlist)[j], outer=T,cex.main=2)
 ###legend###
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
@@ -600,7 +613,7 @@ abline(h=0, col="darkgrey")
 for(y in c("2013","2014","2015","2016")){
 tmp <- subset(thourlyregion[[i]], format(datetime, "%Y") %in% c(y))
 abline(v=as.POSIXct(tmp$datetime[which(tmp$Ii > 0)[1]],format="%Y-%m-%d %H:%M%S"), col="darkgrey",lty=2,lwd=4)
-abline(v=as.POSIXct(tmp$datetime[which(tmp$temphourmean >= thourlyregion[[i]]$t0maxyears[1])[1]],format="%Y-%m-%d %H:%M%S"), col=adjustcolor("red",0.3),lty=2,lwd=4)
+abline(v=as.POSIXct(tmp$datetime[which(round(tmp$temphourmean,1) >= round(thourlyregion[[i]]$t0maxyears[1],1))[1]],format="%Y-%m-%d %H:%M%S"), col=adjustcolor("red",0.3),lty=2,lwd=4)
 }
 
 points(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$date, subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence * 40,col = adjustcolor(ifelse(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence > 0,'blue','red'),0.5), pch=16,xaxt="n",cex=2)
@@ -620,7 +633,7 @@ axis(4, cex.axis=2)
 abline(h=round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red")
 mtext("Mean Hourly Temperature °C",side=4,line=3,cex=1)
 }
-title("C. melanoneura P-generation", outer=T,cex.main=2)
+title(mainTitle, outer=T,cex.main=2)
 #title(names(tempsumlist)[j], outer=T,cex.main=2)
 ###legend###
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)

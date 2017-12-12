@@ -204,7 +204,7 @@ tempsum <- join_all(list(tempsum, c.melPcomb,c.melF1comb,c.picPcomb,c.picF1comb)
 ```
 
 
-```{r}
+```{r,results="hide"}
 # This chunk filters dataset to get only species/region/year combinations with absences before presences!
 
 df <- tempsumlist
@@ -258,10 +258,7 @@ lapply(dfNEW2,
 
 
 NrecordsYear <- table(substr(SpeciesRegionYear_Presences,1,nchar(SpeciesRegionYear_Presences)-5))
-NrecordsYear[NrecordsYear>1]
-#c.melPcomb.Burggrafenamt     c.melPcomb.Vinschgau c.picPcomb.Burggrafenamt     c.picPcomb.Vinschgau 
-#                       2                        2                        4                        3 
-
+#NrecordsYear[NrecordsYear>1]
 
 NrecordsYearThreshold <- NrecordsYear[NrecordsYear>=n] # minimum 3 years of records per species and regions
 
@@ -552,14 +549,12 @@ for(i in 1:length(a0)){
 
 
 
-
+9\. Only select regions with at least 2 years of survey data
 ```{r,results="hide"}
-#Only select regions with at least 2 years of survey data
 a0 <- selectAtleast2Regions(a0) # automatically backups a0 to a0_old
 ```
 
-
-
+10\. Species specific selection of temperature and immigration data
 ```{r tmax, DD, Ii for thourly,results="hide"}
 #Index of tempsumlist of dataset you want to look at 
 # c.melPcomb:  x=1
@@ -663,7 +658,7 @@ thourlist[[s]] <- tmp
 
 
 
-
+11\. FINAL: Species and region-specific graphics of temperature and immigration index thresholds
 
 ```{r base plots, echo=TRUE,fig.height = 10,message=FALSE}
 Sys.setlocale("LC_TIME", "English") # to match English date structure
@@ -752,40 +747,6 @@ legend("bottom", c("Ii","T[°C]","1st Ii>0","1st T>T7th","Presence", "Absence"),
 ```
 
 
-
-
-```{r ggplot2}
-library(gridExtra)
-library(grid)
-library(scales)
-
-#Region  ##########################################################################
-pl <- lapply(1:6, function(i)
-ggplot()+  
-geom_line(data=thourlyregion[[i]],aes(x=thourlyregion[[i]]$datetime,y=thourlyregion[[i]]$Ii),size=0.5, alpha=0.5) + 
-
-geom_line(data=thourlyregion[[i]],aes(x=thourlyregion[[i]]$datetime,y=thourlyregion[[i]]$temphourmean),size=0.5, alpha=0.5, col="red") +
-  
-ylim(-10,40) + 
-
-geom_point(data=subset(tempsumlist[[x]], region==names(thourlyregion)[i]),
-           aes(x=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$date, y=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$abundance,color=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$abundance > 0),alpha=0.3) +
-
-scale_colour_manual(name = '+ Presence', values = setNames(c('darkblue','red'),c(T, F)),guide=FALSE) +
-geom_hline(yintercept = 0, col="blue") +
-geom_hline(yintercept = round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red") +
-
-xlab("Date") +
-ylab("Immigration Index") +
-theme_light() + 
-ggtitle(names(thourlyregion[i])) +
-annotate(geom="text", x=as.POSIXct("2016-03-01"), y=20, label = paste("t0max=",round(thourlyregion[[i]]$t0maxyears[1],digits=2)), fontface="italic")
-#scale_x_datetime(labels=date_format("%Y-%m"), breaks=("1 year"), minor_breaks=("1 month"))
-)
-title1=textGrob(names(tempsumlist)[x], gp=gpar(fontface="bold",cex=1.5)) #adjust main title
-marrangeGrob(pl,ncol=2,nrow=3,top=title1) #used to multiplot (like par(mfrow))
-
-```
 
 
 

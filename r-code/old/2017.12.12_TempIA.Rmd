@@ -1,43 +1,73 @@
-Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis - Appendix A
-==========================================================================================================================================================================
+---
+title: Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors
+  of apple proliferation disease, using a temperature-based immigration analysis -
+  Appendix A
+author: "Bernd Panassiti, Nicolas Sander"
+date: 'created: 25.10.2016, last modified: `r format(Sys.Date(), format="%d.%m.%Y")`'
+output:
+  md_document:
+    variant: markdown_github
+  html_document:
+  pdf_document:
+    fig_caption: yes
+    keep_tex: yes
+header-includes: \usepackage{graphicx}
+---
 
-Introduction
-------------
 
-This document is an appendix to the article: ''Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis''. The document provides the calculation procedure for a temperature-based immigation analysis based on Tedeschi et al. (2012).
+```{r setup, echo=FALSE,eval=TRUE,warning=FALSE,message=FALSE}
+library(knitr) # for creating html-file
+knitr::opts_knit$set(root.dir='../') # definining working directory; or normalizePath('../')
+knitr::opts_chunk$set(fig.align='center') # aligns all figures
+knitr::opts_chunk$set(echo=TRUE) # shows r-code
+knitr::opts_chunk$set(message=FALSE) # suppresses library outputs
+knitr::opts_chunk$set(warning=FALSE) # suppresses library warnings
+```
 
-Data
-----
 
+# Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis - Appendix A
+
+## Introduction
+This document is an appendix to the article: ''Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis''.
+The document provides the calculation procedure for a temperature-based immigation analysis based on Tedeschi et al. (2012).
+
+
+
+## Data
 ##### Loading data and libraries
 
 TempIA.RData includes the following R-objects:
 
--   c.melanoneuraPB
+* c.melanoneuraPB  
 
--   c.melanoneuraF1B
+* c.melanoneuraF1B  
 
--   c.pictaPB
+* c.pictaPB  
 
--   c.pictaF1B
+* c.pictaF1B  
 
--   c.melanoneuraPYT
+* c.melanoneuraPYT  
 
--   c.melanoneuraF1YT
+* c.melanoneuraF1YT  
 
--   c.pictaPYT
+* c.pictaPYT  
 
--   c.pictaF1YT
+* c.pictaF1YT  
 
--   modeldata.t
+* modeldata.t
 
--   sitesInsectVector
+* sitesInsectVector  
 
--   weatherStationsHourly\_split
+* weatherStationsHourly_split  
 
--   clusterStations
+* clusterStations  
 
-``` r
+
+
+
+
+
+```{r load_settings_data_libraries}
 rm(list=ls(all=TRUE))
 Sys.setenv(TZ="Europe/Rome")
 #Sys.getenv("TZ")
@@ -96,12 +126,14 @@ if(!require(lubridate)) # date functions
 
 #### Data preparation
 
-P = parents, re-emigrants, overwintering vectors
-F1 = offspring, emigrants
-B = vector sampling method: beating tray
+P = parents, re-emigrants, overwintering vectors  
+F1 = offspring, emigrants  
+B = vector sampling method: beating tray  
 YT = vector sampling method: yellow traps
 
-``` r
+
+
+```{r data_preperation,results="hide"}
 tempsum <- data.frame()
 
 #pulling out site_id,cluster, year, date and abundance for each insect_id and insect_stage_id
@@ -171,7 +203,8 @@ list2env(tempsumlist,environment())  #overwrite single dataframes in the global 
 tempsum <- join_all(list(tempsum, c.melPcomb,c.melF1comb,c.picPcomb,c.picF1comb), type="full")
 ```
 
-``` r
+
+```{r}
 # This chunk filters dataset to get only species/region/year combinations with absences before presences!
 
 df <- tempsumlist
@@ -225,7 +258,10 @@ lapply(dfNEW2,
 
 
 NrecordsYear <- table(substr(SpeciesRegionYear_Presences,1,nchar(SpeciesRegionYear_Presences)-5))
-#NrecordsYear[NrecordsYear>1]
+NrecordsYear[NrecordsYear>1]
+#c.melPcomb.Burggrafenamt     c.melPcomb.Vinschgau c.picPcomb.Burggrafenamt     c.picPcomb.Vinschgau 
+#                       2                        2                        4                        3 
+
 
 NrecordsYearThreshold <- NrecordsYear[NrecordsYear>=n] # minimum 3 years of records per species and regions
 
@@ -238,40 +274,46 @@ dfNEW3 <- lapply(dfNEW2, function(j){
 
 tempsumlist <- NULL
 tempsumlist <- dfNEW3
+
+
 ```
 
-Temperature-based immigration analysis
---------------------------------------
+
+
+
+
+## Temperature-based immigration analysis
 
 ##### Calculation of thresholds and indices
-
 The code below calculates the following thresholds and indices:
 
--   **a0** = Date of first occurence for each site and year (+ species, generation and method)
 
--   aMax = Date of max. abundance for each site (+ species, generation and method)
+* **a0** = Date of first occurence for each site and year (+ species, generation and method)  
 
--   thourly = Temperature for each hour for each weather station
+* aMax = Date of max. abundance for each site (+ species, generation and method)  
 
--   thourlyregion = Temperature for each hour for each weather station summarized by region
+* thourly = Temperature for each hour for each weather station  
 
--   TMax = Max. daily temperature & tmedian from hourly mean temps
+* thourlyregion = Temperature for each hour for each weather station summarized by region  
 
--   **T0Max** = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site)
+* TMax = Max. daily temperature & tmedian from hourly mean temps  
 
--   T0maxmin and T0maxmean: Minimum of all t0max/t0mean that belong to the same site over several years
+* **T0Max** = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site)  
 
--   T0maxyears = Min of t0maxmin by year for id (region || cluster) in order to check for regional differences
+* T0maxmin and T0maxmean: Minimum of all t0max/t0mean that belong to the same site over several years  
 
--   DD (degree days) = number of hours over t0max per week preceding a0
+* T0maxyears = Min of t0maxmin by year for id (region || cluster) in order to check for regional differences  
 
--   T7n = mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))
+* DD (degree days) = number of hours over t0max per week preceding a0  
 
--   **Ii** = Immigration Index for the a0; Ii = (T7n - T7th) + DD
+* T7n = mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))  
 
-1. a0 and aMax
+* **Ii** = Immigration Index for the a0; Ii = (T7n - T7th) + DD  
 
-``` r
+
+
+1\. a0 and aMax
+```{r a0 and aMax}
 ##################################################################################################
 #CALCULATING a0
 a0 <-lapply(tempsumlist, function(j){
@@ -312,7 +354,8 @@ for(i in 1:length(aMax)){ #Adding region||cluster||site_id to aMax as id
 }
 ```
 
-``` r
+
+```{r thourly & thourlyregion}
 ##################################################################################################
 thourly <- weatherStationsHourly_split
 thourly <- lapply(thourly, function(x) x[,-c(6:11)]) #removing unneeded columns
@@ -329,11 +372,12 @@ for(i in 1:length(thourly)){
 thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
 thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T)))
 thourlyregion <- split(thourlyregion, thourlyregion$region) #combine dataframes back into list
+
 ```
 
-2. Tmax and Tmedian
 
-``` r
+2\. Tmax and Tmedian
+```{r tmax and tmedian}
 ##################################################################################################
 #CALCULATING TMax = Max. daily temperature & tmedian from hourly mean temps
 tmax <- list()
@@ -379,9 +423,9 @@ for(i in 1:nrow(clusterStations)){
 }
 ```
 
-3. T0max
 
-``` r
+3\. T0max
+```{r t0max,results="hide"}
 ##################################################################################################
 #T0Max = max of max daily temperature of 7 days preceding a0 (per observation, insect type and site)
 #check a0 and then filter through txmax and tmedian at corresponding weatherstation (from cluster)
@@ -404,9 +448,9 @@ for(i in 1:length(a0)){ #loop through all species,generation and method
 }
 ```
 
-4. T0maxmin and T0maxmean
 
-``` r
+4\. T0maxmin and T0maxmean
+```{r t0maxmin and t0maxmean}
 ##################################################################################################
 #Minimum of all t0max/t0mean that belong to the same site over several years
 t0maxmin <- list()
@@ -420,9 +464,9 @@ for(i in 1:length(a0)){
 }
 ```
 
-5. T0maxyears
 
-``` r
+5\. T0maxyears
+```{r t0maxyears}
 ##################################################################################################
 #Min of t0maxmin by year for id (region || cluster) in order to check for regional differences
 t0maxyears <- list()
@@ -436,9 +480,9 @@ for(i in 1:length(a0)){
 }
 ```
 
-6. DD
 
-``` r
+6\. DD
+```{r DD for only a0,results="hide"}
 ##################################################################################################
 #Degree days DD = medium daily number of hours over t0max per week preceding a0
 for(i in 1:length(a0)){ # 1:4 - Cmel P and F1 and Cpicta P and F1
@@ -467,11 +511,13 @@ for(i in 1:length(a0)){ # 1:4 - Cmel P and F1 and Cpicta P and F1
 # - select vector, e.g. C. melanoneura parental generation (i)
 # - loop through survey records (j)
 # - select weather station in the same region (x)
+
 ```
 
-7. T7n
 
-``` r
+
+7\. T7n
+```{r T7n for only a0,results="hide"}
 ############################################################################################
 # mean max daily temperatures in 7 days before a0 (using Tmax (max daily temperatures))
 for(i in 1:length(a0)){
@@ -489,9 +535,9 @@ for(i in 1:length(a0)){
 }
 ```
 
-8. Ii
 
-``` r
+8\. Ii
+```{r Ii for only a0}
 ##################################################################################################
 #Immigration Index for the a0 
 #Ii = (T7n - T7th) + DD
@@ -503,15 +549,18 @@ for(i in 1:length(a0)){
 }
 ```
 
-9. Only select regions with at least 2 years of survey data
 
-``` r
+
+
+
+```{r,results="hide"}
+#Only select regions with at least 2 years of survey data
 a0 <- selectAtleast2Regions(a0) # automatically backups a0 to a0_old
 ```
 
-10. Species specific selection of temperature and immigration data
 
-``` r
+
+```{r tmax, DD, Ii for thourly,results="hide"}
 #Index of tempsumlist of dataset you want to look at 
 # c.melPcomb:  x=1
 # c.melF1comb: x=2
@@ -609,15 +658,15 @@ thourlist[[s]] <- tmp
 }
 ```
 
-11. FINAL: Species and region-specific graphics of temperature and immigration index thresholds
 
-``` r
+
+
+
+
+
+
+```{r base plots, echo=TRUE,fig.height = 10,message=FALSE}
 Sys.setlocale("LC_TIME", "English") # to match English date structure
-```
-
-    ## [1] ""
-
-``` r
 graphtitleSpecies <- c("Cacopsylla melanoneura", "Cacopsylla melanoneura ","Cacopsylla picta","Cacopsylla picta")
 graphtitleType <- c("remigrants", "emigrants","remigrants","emigrants")
 
@@ -699,60 +748,106 @@ mtext("Mean Hourly Temperature °C",side=4,line=3,cex=1)
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
 plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
 legend("bottom", c("Ii","T[°C]","1st Ii>0","1st T>T7th","Presence", "Absence"), col=c("darkgrey","red","darkgrey","red","blue","red"),lty=c(1,1,2,2,NA,NA),pch=c(NA,NA,NA,NA,16,16),bty="n",cex=1.75,horiz = T,pt.cex=2,text.width = 0.21, seg.len=0.75,lwd=2,xpd=2)
+
 ```
 
-<img src="TempIA_files/figure-markdown_github/base plots-1.png" style="display: block; margin: auto;" />
 
-References
-==========
 
+
+```{r ggplot2}
+library(gridExtra)
+library(grid)
+library(scales)
+
+#Region  ##########################################################################
+pl <- lapply(1:6, function(i)
+ggplot()+  
+geom_line(data=thourlyregion[[i]],aes(x=thourlyregion[[i]]$datetime,y=thourlyregion[[i]]$Ii),size=0.5, alpha=0.5) + 
+
+geom_line(data=thourlyregion[[i]],aes(x=thourlyregion[[i]]$datetime,y=thourlyregion[[i]]$temphourmean),size=0.5, alpha=0.5, col="red") +
+  
+ylim(-10,40) + 
+
+geom_point(data=subset(tempsumlist[[x]], region==names(thourlyregion)[i]),
+           aes(x=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$date, y=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$abundance,color=subset(tempsumlist[[x]], region==names(thourlyregion)[i])$abundance > 0),alpha=0.3) +
+
+scale_colour_manual(name = '+ Presence', values = setNames(c('darkblue','red'),c(T, F)),guide=FALSE) +
+geom_hline(yintercept = 0, col="blue") +
+geom_hline(yintercept = round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red") +
+
+xlab("Date") +
+ylab("Immigration Index") +
+theme_light() + 
+ggtitle(names(thourlyregion[i])) +
+annotate(geom="text", x=as.POSIXct("2016-03-01"), y=20, label = paste("t0max=",round(thourlyregion[[i]]$t0maxyears[1],digits=2)), fontface="italic")
+#scale_x_datetime(labels=date_format("%Y-%m"), breaks=("1 year"), minor_breaks=("1 month"))
+)
+title1=textGrob(names(tempsumlist)[x], gp=gpar(fontface="bold",cex=1.5)) #adjust main title
+marrangeGrob(pl,ncol=2,nrow=3,top=title1) #used to multiplot (like par(mfrow))
+
+```
+
+
+
+\pagebreak
+
+# References
 Tedeschi R., Baldessari M., Mazzoni V., Trona F. and Angeli G. (2012). Population dynamics of *Cacopsylla melanoneura* (Hemiptera: Psyllidae) in northeast Italy and its role in the apple proliferation epidemiology in apple orchards. - Journal of Economic Entomology 105, 322–328.
 
-Session info
-------------
+\pagebreak
 
-| setting  | value                        |
-|----------|------------------------------|
-| version  | R version 3.3.1 (2016-06-21) |
-| system   | x86\_64, darwin13.4.0        |
-| ui       | RStudio (1.0.143)            |
-| language | (EN)                         |
-| collate  | en\_US.UTF-8                 |
-| tz       | Europe/Rome                  |
+## Session info
+```{r, echo=FALSE, eval=FALSE}
+devtools::session_info()
+```
 
-| package    | \*  | version | date       | source         |
-|------------|-----|---------|------------|----------------|
-| assertthat |     | 0.1     | 2013-12-06 | CRAN (R 3.3.0) |
-| backports  |     | 1.0.5   | 2017-01-18 | CRAN (R 3.3.2) |
-| colorspace |     | 1.3-2   | 2016-12-14 | CRAN (R 3.3.2) |
-| DBI        |     | 0.5-1   | 2016-09-10 | CRAN (R 3.3.0) |
-| devtools   |     | 1.12.0  | 2016-06-24 | CRAN (R 3.3.0) |
-| digest     |     | 0.6.12  | 2017-01-27 | CRAN (R 3.3.1) |
-| dplyr      | \*  | 0.5.0   | 2016-06-24 | CRAN (R 3.3.0) |
-| evaluate   |     | 0.10    | 2016-10-11 | cran (@0.10)   |
-| ggplot2    | \*  | 2.2.1   | 2016-12-30 | CRAN (R 3.3.2) |
-| gridExtra  | \*  | 2.2.1   | 2016-02-29 | CRAN (R 3.3.0) |
-| gtable     |     | 0.2.0   | 2016-02-26 | CRAN (R 3.3.0) |
-| htmltools  |     | 0.3.5   | 2016-03-21 | CRAN (R 3.3.0) |
-| knitr      |     | 1.15.1  | 2016-11-22 | CRAN (R 3.3.2) |
-| labeling   |     | 0.3     | 2014-08-23 | CRAN (R 3.3.0) |
-| lattice    |     | 0.20-34 | 2016-09-06 | CRAN (R 3.3.0) |
-| lazyeval   |     | 0.2.0   | 2016-06-12 | CRAN (R 3.3.0) |
-| magrittr   |     | 1.5     | 2014-11-22 | CRAN (R 3.3.0) |
-| MASS       | \*  | 7.3-45  | 2016-04-21 | CRAN (R 3.3.1) |
-| memoise    |     | 1.0.0   | 2016-01-29 | CRAN (R 3.3.0) |
-| munsell    |     | 0.4.3   | 2016-02-13 | CRAN (R 3.3.0) |
-| plyr       | \*  | 1.8.4   | 2016-06-08 | CRAN (R 3.3.0) |
-| qtlcharts  | \*  | 0.7-8   | 2016-06-28 | CRAN (R 3.3.0) |
-| R6         |     | 2.2.0   | 2016-10-05 | cran (@2.2.0)  |
-| Rcpp       |     | 0.12.9  | 2017-01-14 | CRAN (R 3.3.2) |
-| rmarkdown  |     | 1.3     | 2016-12-21 | CRAN (R 3.3.2) |
-| rprojroot  |     | 1.2     | 2017-01-16 | CRAN (R 3.3.2) |
-| rsconnect  |     | 0.7     | 2016-12-21 | CRAN (R 3.3.2) |
-| scales     | \*  | 0.4.1   | 2016-11-09 | CRAN (R 3.3.2) |
-| sp         |     | 1.2-4   | 2016-12-22 | CRAN (R 3.3.2) |
-| stringi    | \*  | 1.1.2   | 2016-10-01 | cran (@1.1.2)  |
-| stringr    |     | 1.1.0   | 2016-08-19 | cran (@1.1.0)  |
-| tibble     |     | 1.2     | 2016-08-26 | CRAN (R 3.3.0) |
-| withr      |     | 1.0.2   | 2016-06-20 | CRAN (R 3.3.0) |
-| yaml       |     | 2.1.14  | 2016-11-12 | cran (@2.1.14) |
+
+setting  | value  
+-------- | -----------------------------  
+version  | R version 3.3.1 (2016-06-21)   
+system   | x86_64, darwin13.4.0            
+ui       | RStudio (1.0.143)                       
+language | (EN)                         
+collate  | en_US.UTF-8                  
+tz       | Europe/Rome   
+
+
+
+package     | * | version | date       | source  
+----------- | - | --------|------------|---------------  
+assertthat  |   | 0.1     | 2013-12-06 | CRAN (R 3.3.0)
+ backports  |   | 1.0.5   | 2017-01-18 | CRAN (R 3.3.2)
+ colorspace |   | 1.3-2   | 2016-12-14 | CRAN (R 3.3.2)
+ DBI        |   | 0.5-1   | 2016-09-10 | CRAN (R 3.3.0)
+ devtools   |   | 1.12.0  | 2016-06-24 | CRAN (R 3.3.0)
+ digest     |   | 0.6.12  | 2017-01-27 | CRAN (R 3.3.1)
+ dplyr      | * | 0.5.0   | 2016-06-24 | CRAN (R 3.3.0)
+ evaluate   |   | 0.10    | 2016-10-11 | cran (@0.10)  
+ ggplot2    | * | 2.2.1   | 2016-12-30 | CRAN (R 3.3.2)
+ gridExtra  | * | 2.2.1   | 2016-02-29 | CRAN (R 3.3.0)
+ gtable     |   | 0.2.0   | 2016-02-26 | CRAN (R 3.3.0)
+ htmltools  |   | 0.3.5   | 2016-03-21 | CRAN (R 3.3.0)
+ knitr      |   | 1.15.1  | 2016-11-22 | CRAN (R 3.3.2)
+ labeling   |   | 0.3     | 2014-08-23 | CRAN (R 3.3.0)
+ lattice    |   | 0.20-34 | 2016-09-06 | CRAN (R 3.3.0)
+ lazyeval   |   | 0.2.0   | 2016-06-12 | CRAN (R 3.3.0)
+ magrittr   |   | 1.5     | 2014-11-22 | CRAN (R 3.3.0)
+ MASS       | * | 7.3-45  | 2016-04-21 | CRAN (R 3.3.1)
+ memoise    |   | 1.0.0   | 2016-01-29 | CRAN (R 3.3.0)
+ munsell    |   | 0.4.3   | 2016-02-13 | CRAN (R 3.3.0)
+ plyr       | * | 1.8.4   | 2016-06-08 | CRAN (R 3.3.0)
+ qtlcharts  | * | 0.7-8   | 2016-06-28 | CRAN (R 3.3.0)
+ R6         |   | 2.2.0   | 2016-10-05 | cran (@2.2.0) 
+ Rcpp       |   | 0.12.9  | 2017-01-14 | CRAN (R 3.3.2)
+ rmarkdown  |   | 1.3     | 2016-12-21 | CRAN (R 3.3.2)
+ rprojroot  |   | 1.2     | 2017-01-16 | CRAN (R 3.3.2)
+ rsconnect  |   | 0.7     | 2016-12-21 | CRAN (R 3.3.2)
+ scales     | * | 0.4.1   | 2016-11-09 | CRAN (R 3.3.2)
+ sp         |   | 1.2-4   | 2016-12-22 | CRAN (R 3.3.2)
+ stringi    | * | 1.1.2   | 2016-10-01 | cran (@1.1.2) 
+ stringr    |   | 1.1.0   | 2016-08-19 | cran (@1.1.0) 
+ tibble     |   | 1.2     | 2016-08-26 | CRAN (R 3.3.0)
+ withr      |   | 1.0.2   | 2016-06-20 | CRAN (R 3.3.0)
+ yaml       |   | 2.1.14  | 2016-11-12 | cran (@2.1.14)
+
+

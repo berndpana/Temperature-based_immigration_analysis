@@ -29,7 +29,7 @@ TempIA.RData includes the following R-objects:
 
 -   c.pictaF1YT
 
--   modeldata.t *site\_id and cluster id*
+-   modeldata.t
 
 -   sitesInsectVector
 
@@ -38,7 +38,12 @@ TempIA.RData includes the following R-objects:
 -   clusterStations
 
 ``` r
+rm(list=ls(all=TRUE))
+Sys.setenv(TZ="Europe/Rome")
+#Sys.getenv("TZ")
+
 source("r-code/00_settings.r")
+
 
 load(file="data/TempIA.RData")
 
@@ -119,6 +124,7 @@ names(c.melF1YT)[6] <- 'abundance'
 names(c.picPYT)[6] <- 'abundance'
 names(c.picF1YT)[6] <- 'abundance'
 
+
 clusterSites <- unique(modeldata.t[,c(2,3)]) #site_id and cluster id
 regionSites <- unique(sitesInsectVector[,c(1,3)])
 
@@ -163,6 +169,87 @@ list2env(tempsumlist,environment())  #overwrite single dataframes in the global 
 
 #merge all dataframes by columns
 tempsum <- join_all(list(tempsum, c.melPcomb,c.melF1comb,c.picPcomb,c.picF1comb), type="full")
+```
+
+``` r
+# This chunk filters dataset to get only species/region/year combinations with absences before presences!
+
+df <- tempsumlist
+
+SpeciesRegionYear_Absences_before_Presences <- names(which(unlist(
+lapply(df, 
+    function(j){
+                                  sapply(split(j, list(j[,3],j[,2])), function(x){x[1,5]==0})
+  }
+))==TRUE))
+
+
+NlistElements <- sapply(df, NROW)
+
+
+idSpeciesRegionYear=data.frame(rep(names(df),sapply(df,NROW)),paste(rep(names(df),sapply(df,NROW)),unlist(lapply(df, "[", c(3))),unlist(lapply(df, "[", c(2))),sep="."))
+colnames(idSpeciesRegionYear) <- c("species","id")
+
+dfNEW <- df
+
+dfNEW$c.melPcomb[["id"]] <- idSpeciesRegionYear[which(idSpeciesRegionYear$species=="c.melPcomb"),2]   #mel remigrants
+dfNEW$c.melF1comb[["id"]] <- idSpeciesRegionYear[which(idSpeciesRegionYear$species=="c.melF1comb"),2] #mel emigrants
+
+dfNEW$c.picPcomb[["id"]] <- idSpeciesRegionYear[which(idSpeciesRegionYear$species=="c.picPcomb"),2]   #pic remigrants
+dfNEW$c.picF1comb[["id"]] <- idSpeciesRegionYear[which(idSpeciesRegionYear$species=="c.picF1comb"),2] #pic emigrants
+
+
+
+
+# FINAL step - FILTER for absences before presences
+
+dfNEW2 <- lapply(dfNEW, function(j){
+                                  j[which(j[,6]%in%SpeciesRegionYear_Absences_before_Presences),]
+}
+)
+
+
+
+
+
+# select only records with at least n years of PRESENCES
+n=1
+
+
+SpeciesRegionYear_Presences <- names(which(unlist(
+lapply(dfNEW2, 
+    function(j){
+                                  sapply(split(j, list(j[,3],j[,2])), function(x){sum(x[,5])>0})
+  }
+))==TRUE))
+
+
+NrecordsYear <- table(substr(SpeciesRegionYear_Presences,1,nchar(SpeciesRegionYear_Presences)-5))
+NrecordsYear[NrecordsYear>1]
+```
+
+    ## 
+    ## c.melPcomb.Burggrafenamt     c.melPcomb.Vinschgau c.picPcomb.Burggrafenamt 
+    ##                        2                        2                        4 
+    ##     c.picPcomb.Vinschgau 
+    ##                        3
+
+``` r
+#c.melPcomb.Burggrafenamt     c.melPcomb.Vinschgau c.picPcomb.Burggrafenamt     c.picPcomb.Vinschgau 
+#                       2                        2                        4                        3 
+
+
+NrecordsYearThreshold <- NrecordsYear[NrecordsYear>=n] # minimum 3 years of records per species and regions
+
+
+
+dfNEW3 <- lapply(dfNEW2, function(j){
+                                  j[which(gsub("(.*)\\..*","\\1", j[,6])  %in% names(NrecordsYearThreshold)),]
+}
+) 
+
+tempsumlist <- NULL
+tempsumlist <- dfNEW3
 ```
 
 Temperature-based immigration analysis
@@ -428,22 +515,40 @@ for(i in 1:length(a0)){
 }
 ```
 
-#### Exemplary graph for *Cacopsylla melanoneura* parental generation
+``` r
+#Only select regions with at least 2 years of survey data
+a0 <- selectAtleast2Regions(a0) # automatically backups a0 to a0_old
+```
 
 ``` r
 #Index of tempsumlist of dataset you want to look at 
 # c.melPcomb:  x=1
 # c.melF1comb: x=2
 # c.picPcomb:  x=3
-# c.picF1comb: x=3
+# c.picF1comb: x=4
+
+species <- data.frame(species =c("c.melPcomb","c.melF1comb","c.picPcomb","c.picF1comb"),id=1:4)
+Species <- species[which(species[,1] %in% colnames(sapply(a0, names))),]$id
+
+Regions <- data.frame(regions =c("Bozen","Burggrafenamt","Eisacktal","Salten-Schlern","Ueberetsch-Unterland","Vinschgau"),id=1:6)
 
 
+thourlist <- list()
+
+for (s in 1:length(Species)){
+  
+  
 ##############################################################################################
-                                          x<-1
+  
+        x <-Species[s] # for which species is the run? ENTERING DESIRED TEMPSUMLIST INDEX
+                                      
 ##############################################################################################
-```
 
-``` r
+                                          
+r <- Regions[which(Regions$regions %in% unique(a0[[as.character(species[Species[s], 1])]]$region)),2] # ids of regions for the graph
+
+
+
 #Calculating max temp per day (tmax) and hours over t0max per day (DD)
 for(i in 1:length(thourly)){
   thourly[[i]]$DD <- NA
@@ -459,9 +564,11 @@ for(i in 1:length(thourly)){
     }
   }
 }
-```
 
-``` r
+
+
+
+
 #Ii aggregated for each id (taking means of all stations within the same id (region || cluster))
 thourlyregion <- dplyr::bind_rows(thourly) #combine lists to 1 dataframe for dplyr
 thourlyregion <- as.data.frame(thourlyregion %>% dplyr::group_by(datetime,datetimenum,region) %>% dplyr::summarise(temphourmean=mean(temphour, na.rm=T), ddmean=mean(DD,na.rm=T), tmaxmean=mean(tmax, na.rm=T)))
@@ -478,9 +585,12 @@ for(i in 1:length(thourlyregion)){
   thourlyregion[[i]]$Ii[(j-(24*7)):j] <- (mean(thourlyregion[[i]]$tmaxmean[(j-(24*7)):j]) - thourlyregion[[i]]$t0maxyears[j]) + mean((thourlyregion[[i]]$ddmean[(j-(24*7)):j])>thourlyregion[[i]]$t0maxyears[j])
   }
 }
-```
 
-``` r
+
+
+
+
+#tmax, DD, Ii region
 thourlyregion <- dplyr::bind_rows(thourlyregion) #combine lists to 1 dataframe for dplyr
 names(t0maxyears[[x]]) <- c("region", "t0maxyears") #rename for use in join_all
 thourlyregion <- join_all(list(thourlyregion, t0maxyears[[x]]), by="region", type="left")
@@ -501,6 +611,11 @@ for(i in 1:length(thourlyregion)){
   thourlyregion[[i]]$Ii[(j-(24*7)):j] <- (mean(thourlyregion[[i]]$tmax[(j-(24*7)):j]) - thourlyregion[[i]]$t0maxyears[j]) + mean((thourlyregion[[i]]$DD[(j-(24*7)):j])>thourlyregion[[i]]$t0maxyears[j])
   }
 }
+
+
+tmp <- list(a=thourly,b=thourlyregion)
+thourlist[[s]] <- tmp
+}
 ```
 
 ``` r
@@ -510,15 +625,44 @@ Sys.setlocale("LC_TIME", "English") # to match English date structure
     ## [1] ""
 
 ``` r
-#Region
-for(j in x){
-###REGION 1-3
-par(oma=c(5.5,3,2,2))
-par(mfrow=c(3,1))
-for(i in 1:3){
-par(mar=c(5,5,4,5)+.1)
-plot(thourlyregion[[i]]$datetime, thourlyregion[[i]]$Ii, main=names(thourlyregion[i]), type="l", ylab="Immigration Index (Ii)",xlab="",yaxt="n", ylim=c(-15,40),col="darkgrey",xaxt="n",cex.lab=2,cex.main=2, cex.axis=2)
-abline(h=0, col="darkgrey")
+graphtitleSpecies <- c("Cacopsylla melanoneura", "Cacopsylla melanoneura ","Cacopsylla picta","Cacopsylla picta")
+graphtitleType <- c("remigrants", "emigrants","remigrants","emigrants")
+
+
+
+
+par(oma=c(5.5,3,2,2),mfrow=c(4,1),mar=c(5,5,4,5)+.1)
+
+for (s in 1:length(Species)){
+
+thourly       <- thourlist[[s]]$a
+thourlyregion <- thourlist[[s]]$b
+  
+##############################################################################################
+  
+        x <-Species[s] # for which species is the run?
+                                      
+##############################################################################################
+
+                                          
+r <- Regions[which(Regions$regions %in% unique(a0[[as.character(species[Species[s], 1])]]$region)),2] # ids of regions for the graph
+
+mainTitle <- list(as.expression(bquote(~italic(.(graphtitleSpecies[x]))~~.(graphtitleType[x])),cex=cexmlabel2))
+
+for(j in x){ # insect type
+for(rr in 1:length(r)){ # region
+  i <- r[rr]
+
+  
+  
+plot(thourlyregion[[i]]$datetime, thourlyregion[[i]]$Ii, main=names(thourlyregion[i]), type="l", ylab="Immigration Index (Ii)",xlab="",
+     ylim=c(-15,40),col="darkgrey",xaxt="n",cex.lab=2,cex.main=2, cex.axis=2)
+
+
+
+
+abline(h=0, col="darkgrey") # Immigration index
+
 
 for(y in c("2013","2014","2015","2016")){
 tmp <- subset(thourlyregion[[i]], format(datetime, "%Y") %in% c(y))
@@ -526,72 +670,45 @@ abline(v=as.POSIXct(tmp$datetime[which(tmp$Ii > 0)[1]],format="%Y-%m-%d %H:%M%S"
 abline(v=as.POSIXct(tmp$datetime[which(tmp$temphourmean >= thourlyregion[[i]]$t0maxyears[1])[1]],format="%Y-%m-%d %H:%M%S"), col=adjustcolor("red",0.3),lty=2,lwd=4)
 }
 
+
+
 points(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$date, subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence * 40,col = adjustcolor(ifelse(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence > 0,'blue','red'),0.5), pch=16,xaxt="n",cex=2)
 text(as.POSIXct("2016-06-01"), thourlyregion[[i]]$t0maxyears[1]+5, "T7th", col = "red",cex=3) 
 text(as.POSIXct("2013-02-01"), 0+5, "Ii=0", col = "black",cex=3) 
 text(as.POSIXct("2014-11-01"), 35, paste("T7th= ",round(thourlyregion[[i]]$t0maxyears[1],digits=2)," °C"),cex=2)
+
+
 ####x axis###
 minor <- seq(as.POSIXct("2013-01-01", format = "%Y-%m-%d"), tail(thourlyregion[[i]]$datetime, 1),
              by = "1 months")
-labDates <- seq(as.POSIXct("2013-01-01", format = "%Y-%m-%d"),tail(thourlyregion[[i]]$datetime,1), by = "2 months")
-axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = labDates, format = "%b", las = 2,cex.axis=2)
+labDates <- seq(as.POSIXct("2013-01-15", format = "%Y-%m-%d"),tail(thourlyregion[[i]]$datetime,1), by = "2 months")
+
+yearPos <- c("2013-08-01 CEST","2014-08-01 CET","2015-08-01 CEST","2016-08-01 CEST")
+
+axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = labDates, format = "%b", las = 2,cex.axis=2,tick = FALSE)
 axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = minor, labels = FALSE, tcl = -0.25)
-axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, format = "%Y",las=1, line=4,lty=0,cex.axis=2)
+axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = yearPos,format = "%Y",las=1, line=4,lty=0,cex.axis=2)
+
+
 ###y temperature###
 lines(thourlyregion[[i]]$datetime, thourlyregion[[i]]$temphourmean,yaxt="n",xaxt="n", ylab="",xlab="",col=adjustcolor("red",0.3), type="l", ylim=c(-15,40))
 axis(4, cex.axis=2)
 abline(h=round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red")
 mtext("Mean Hourly Temperature °C",side=4,line=3,cex=1)
 }
-title("C. melanoneura P-generation", outer=T,cex.main=2)
+#title(mainTitle, outer=T,cex.main=2)
 #title(names(tempsumlist)[j], outer=T,cex.main=2)
-###legend###
+}
+
+}
+
+##legend###
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
 plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
 legend("bottom", c("Ii","T[°C]","1st Ii>0","1st T>T7th","Presence", "Absence"), col=c("darkgrey","red","darkgrey","red","blue","red"),lty=c(1,1,2,2,NA,NA),pch=c(NA,NA,NA,NA,16,16),bty="n",cex=1.75,horiz = T,pt.cex=2,text.width = 0.21, seg.len=0.75,lwd=2,xpd=2)
-
-###REGION 4-6
-par(oma=c(5.5,3,2,2))
-par(mfrow=c(3,1))
-for(i in 4:6){
-par(mar=c(5,5,4,5)+.1)
-plot(thourlyregion[[i]]$datetime, thourlyregion[[i]]$Ii, main=names(thourlyregion[i]), type="l", ylab="Immigration Index (Ii)",xlab="",yaxt="n", ylim=c(-15,40),col="darkgrey",xaxt="n",cex.lab=2,cex.main=2, cex.axis=2)
-abline(h=0, col="darkgrey")
-
-for(y in c("2013","2014","2015","2016")){
-tmp <- subset(thourlyregion[[i]], format(datetime, "%Y") %in% c(y))
-abline(v=as.POSIXct(tmp$datetime[which(tmp$Ii > 0)[1]],format="%Y-%m-%d %H:%M%S"), col="darkgrey",lty=2,lwd=4)
-abline(v=as.POSIXct(tmp$datetime[which(tmp$temphourmean >= thourlyregion[[i]]$t0maxyears[1])[1]],format="%Y-%m-%d %H:%M%S"), col=adjustcolor("red",0.3),lty=2,lwd=4)
-}
-
-points(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$date, subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence * 40,col = adjustcolor(ifelse(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence > 0,'blue','red'),0.5), pch=16,xaxt="n",cex=2)
-text(as.POSIXct("2016-06-01"), thourlyregion[[i]]$t0maxyears[1]+5, "T7th", col = "red",cex=3) 
-text(as.POSIXct("2013-02-01"), 0+5, "Ii=0", col = "black",cex=3) 
-text(as.POSIXct("2014-11-01"), 35, paste("T7th= ",round(thourlyregion[[i]]$t0maxyears[1],digits=2)," °C"),cex=2)
-####x axis###
-minor <- seq(as.POSIXct("2013-01-01", format = "%Y-%m-%d"), tail(thourlyregion[[i]]$datetime, 1),
-             by = "1 months")
-labDates <- seq(as.POSIXct("2013-01-01", format = "%Y-%m-%d"),tail(thourlyregion[[i]]$datetime,1), by = "2 months")
-axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = labDates, format = "%b", las = 2,cex.axis=2)
-axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, at = minor, labels = FALSE, tcl = -0.25)
-axis.POSIXct(side = 1, thourlyregion[[i]]$datetime, format = "%Y",las=1, line=4,lty=0,cex.axis=2)
-###y temperature###
-lines(thourlyregion[[i]]$datetime, thourlyregion[[i]]$temphourmean,yaxt="n",xaxt="n", ylab="",xlab="",col=adjustcolor("red",0.3), type="l", ylim=c(-15,40))
-axis(4, cex.axis=2)
-abline(h=round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red")
-mtext("Mean Hourly Temperature °C",side=4,line=3,cex=1)
-}
-title("C. melanoneura P-generation", outer=T,cex.main=2)
-#title(names(tempsumlist)[j], outer=T,cex.main=2)
-###legend###
-par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
-plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
-legend("bottom", c("Ii","T[°C]","1st Ii>0","1st T>T7th","Presence", "Absence"), col=c("darkgrey","red","darkgrey","red","blue","red"),lty=c(1,1,2,2,NA,NA),pch=c(NA,NA,NA,NA,16,16),bty="n",cex=1.75,horiz = T,pt.cex=2,text.width = 0.21, seg.len=0.75,lwd=2,xpd=2)
-
-}
 ```
 
-<img src="TempIA_files/figure-markdown_github/base plots-1.png" style="display: block; margin: auto;" /><img src="TempIA_files/figure-markdown_github/base plots-2.png" style="display: block; margin: auto;" />
+<img src="TempIA_files/figure-markdown_github/base plots-1.png" style="display: block; margin: auto;" />
 
 ``` r
 library(gridExtra)

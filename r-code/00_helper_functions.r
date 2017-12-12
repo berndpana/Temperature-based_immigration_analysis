@@ -1162,3 +1162,14 @@ doUnivariateTest <- function(Site='', dfSim,dfObs,plot = T){
   return(pv)
 }
 
+
+
+selectAtleast2Regions <- function(x){
+  assign(paste(deparse(substitute(x)),"_old",sep=""),x,.GlobalEnv)
+  x_new <- lapply(x, function(j){ j[which(j[,4] %in% names(which(table(j[,4])>1))),]})
+
+  rm(list = ls(pat = paste(deparse(substitute(x)), "\\b", sep=""), envir = .GlobalEnv), envir = .GlobalEnv) # match x that is not followed by a word character
+  return(x_new[sapply(x_new, nrow)>0])
+}
+
+

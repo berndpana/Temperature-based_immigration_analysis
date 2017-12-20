@@ -1,6 +1,6 @@
 ---
 title: Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors
-  of apple proliferation disease, using a temperature-based immigration analysis -
+  of the apple proliferation disease, using a temperature-based immigration analysis -
   Appendix A
 author: "Bernd Panassiti, Nicolas Sander"
 date: 'created: 25.10.2016, last modified: `r format(Sys.Date(), format="%d.%m.%Y")`'
@@ -29,12 +29,15 @@ knitr::opts_chunk$set(warning=FALSE) # suppresses library warnings
 
 ## Introduction
 This document is an appendix to the article: ''Prediction of flight onset of *Cacopsylla melanoneura* and *C. picta*, vectors of apple proliferation disease, using a temperature-based immigration analysis''.
-The document provides the calculation procedure for a temperature-based immigation analysis based on Tedeschi et al. (2012).
+The document provides the calculation procedure for a temperature-based immigation analysis based on Tedeschi et al. (2012).  
 
 
 
 ## Data
 ##### Loading data and libraries
+
+The dataset ''TempIA.RData`` is not freely available but access can be requested following [this link](https://berndpanassiti.github.io).
+
 
 TempIA.RData includes the following R-objects:
 

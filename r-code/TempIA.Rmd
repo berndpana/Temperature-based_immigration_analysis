@@ -671,7 +671,7 @@ graphtitleType <- c("remigrants", "emigrants","remigrants","emigrants")
 
 
 
-par(oma=c(5.5,3,2,2),mfrow=c(4,1),mar=c(5,5,4,5)+.1)
+par(oma=c(5.5,3,2,2),mfrow=c(2,1),mar=c(5,5,4,5)+.1)
 
 for (s in 1:length(Species)){
 
@@ -713,9 +713,6 @@ abline(v=as.POSIXct(tmp$datetime[which(tmp$temphourmean >= thourlyregion[[i]]$t0
 
 
 points(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$date, subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence * 40,col = adjustcolor(ifelse(subset(tempsumlist[[j]], region==names(thourlyregion)[i])$presence > 0,'blue','red'),0.5), pch=16,xaxt="n",cex=2)
-text(as.POSIXct("2016-06-01"), thourlyregion[[i]]$t0maxyears[1]+5, "T7th", col = "red",cex=3) 
-text(as.POSIXct("2013-02-01"), 0+5, "Ii=0", col = "black",cex=3) 
-text(as.POSIXct("2014-11-01"), 35, paste("T7th= ",round(thourlyregion[[i]]$t0maxyears[1],digits=2)," °C"),cex=2)
 
 
 ####x axis###
@@ -735,18 +732,21 @@ lines(thourlyregion[[i]]$datetime, thourlyregion[[i]]$temphourmean,yaxt="n",xaxt
 axis(4, cex.axis=2)
 abline(h=round(thourlyregion[[i]]$t0maxyears[1],digits=2), col="red")
 mtext("Mean Hourly Temperature °C",side=4,line=3,cex=1)
+
+
+text(as.POSIXct("2013-02-01"), 0+5, "Ii=0", col = "black",cex=2) 
+text(as.POSIXct("2016-05-01"), thourlyregion[[i]]$t0maxyears[1]+5, paste("T7th=",round(thourlyregion[[i]]$t0maxyears[1],digits=2),"°C",sep=""),cex=2)
 }
 #title(mainTitle, outer=T,cex.main=2)
 #title(names(tempsumlist)[j], outer=T,cex.main=2)
-}
-
 }
 
 ##legend###
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
 plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
 legend("bottom", c("Ii","T[°C]","1st Ii>0","1st T>T7th","Presence", "Absence"), col=c("darkgrey","red","darkgrey","red","blue","red"),lty=c(1,1,2,2,NA,NA),pch=c(NA,NA,NA,NA,16,16),bty="n",cex=1.75,horiz = T,pt.cex=2,text.width = 0.21, seg.len=0.75,lwd=2,xpd=2)
-
+par(oma=c(5.5,3,2,2),mfrow=c(2,1),mar=c(5,5,4,5)+.1)
+}
 ```
 
 
